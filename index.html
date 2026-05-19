@@ -47,6 +47,7 @@ td{padding:6px 10px;border-bottom:1px solid #F0F0F0;}
 .section-label{font-size:12px;font-weight:700;padding:6px 10px;border-radius:6px;margin:10px 0 6px;}
 .section-prod{background:#E8EAF6;color:#1A237E;}
 .section-out{background:#E8F5E9;color:#1B5E20;}
+.loading-bar{background:#E8EAF6;border-radius:10px;padding:10px 14px;font-size:13px;color:#3949AB;margin-bottom:8px;}
 .typing{display:flex;align-items:center;gap:6px;color:#888;font-size:14px;padding:4px 0;}
 .dot{width:7px;height:7px;border-radius:50%;background:#BBB;animation:bounce .8s infinite;}
 .dot:nth-child(2){animation-delay:.15s;}
@@ -59,14 +60,14 @@ td{padding:6px 10px;border-bottom:1px solid #F0F0F0;}
   <div class="icon">📦</div>
   <div>
     <div class="title">부자재 AI 계산기</div>
-    <div class="sub">생산 부자재 · 출고 부자재 분리 관리</div>
+    <div class="sub">구글 시트 실시간 연동 · 생산/출고 분리 관리</div>
   </div>
 </div>
 <div id="quickbar">
-  <button onclick="send('Notte Duffle Bag 300개 생산할 때 생산 부자재 확인해줘')">🔵 생산 300개</button>
-  <button onclick="send('Aube Soft Shopper Bag 500개 생산 부자재 알려줘')">🔵 생산 500개</button>
-  <button onclick="send('출고 부자재 재고 현황 보여줘')">🟢 출고 재고현황</button>
-  <button onclick="send('생산 부자재 재고 현황 보여줘')">🔵 생산 재고현황</button>
+  <button onclick="send('300개 생산할 때 생산 부자재 확인해줘')">🔵 생산 300개</button>
+  <button onclick="send('500개 생산 부자재 알려줘')">🔵 생산 500개</button>
+  <button onclick="send('출고 부자재 재고 현황 보여줘')">🟢 출고 현황</button>
+  <button onclick="send('생산 부자재 재고 현황 보여줘')">🔵 생산 현황</button>
   <button onclick="send('전체 재고 현황 보여줘')">📊 전체 현황</button>
   <button onclick="send('거래처 정보 알려줘')">📋 거래처</button>
 </div>
@@ -76,22 +77,28 @@ td{padding:6px 10px;border-bottom:1px solid #F0F0F0;}
   <button id="sendbtn" onclick="send()">전송</button>
 </div>
 <script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 const TODAY = new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
-
-const PROD_MATERIALS = [
-  {id:1,cat:"생산",name:"로고라벨",  stock:500,safe:200,per:1,lead:"3일", sup:"하나라벨",   contact:"안경석 / 02-2272-7247",                           moq:1000,price:140, note:""},
-  {id:2,cat:"생산",name:"케어라벨",  stock:500,safe:200,per:1,lead:"7일", sup:"XBS",        contact:"이돈창 / 010-6385-6994",                           moq:1000,price:50,  note:""},
-  {id:3,cat:"생산",name:"로고 행택", stock:500,safe:200,per:1,lead:"7일", sup:"비즈하우스", contact:"https://www.bizhows.com",                           moq:1000,price:59,  note:"반누보 209g"},
-  {id:4,cat:"생산",name:"무지 행택", stock:500,safe:200,per:1,lead:"7일", sup:"비즈하우스", contact:"https://www.bizhows.com",                           moq:1000,price:59,  note:"반누보 209g"},
-  {id:5,cat:"생산",name:"행택 끈",   stock:500,safe:300,per:1,lead:"3일", sup:"드림팩토리", contact:"https://www.coupang.com/vp/products/8613696153",   moq:1000,price:8,   note:"원터치 사각 택끈 블랙"},
-];
-const OUT_MATERIALS = [
-  {id:6,cat:"출고",name:"출고용 택배 박스",stock:32, safe:10, per:1,lead:"4일", sup:"박스포유", contact:"https://www.box4u.co.kr",        moq:32,  price:778, note:"450×320×200"},
-  {id:7,cat:"출고",name:"입고용 카톤 박스",stock:110,safe:30, per:0,lead:"-",   sup:"XBS",      contact:"이돈창 / 010-6385-6994",         moq:200, price:1550,note:"500×400×560"},
-  {id:8,cat:"출고",name:"더스트백",        stock:700,safe:50, per:1,lead:"21일",sup:"가온포장", contact:"김현기 / 010-4509-8714",         moq:1000,price:620, note:"70g WH 복주머니"},
-];
-const ALL_MATERIALS = [...PROD_MATERIALS, ...OUT_MATERIALS];
 const PRODUCTS = ["Notte Duffle Bag","Aube Suede Shopper Bag","Aube Soft Shopper Bag","Mardi Laptop Bag"];
+
+let ALL_MATERIALS = [];
+let PROD_MATERIALS = [];
+let OUT_MATERIALS = [];
+let dataLoaded = false;
+
+async function loadData() {
+  try {
+    const res = await fetch(SCRIPT_URL);
+    const data = await res.json();
+    ALL_MATERIALS = data.map(m => ({...m, stock: Number(m.stock), safe: Number(m.safe), per: Number(m.per), moq: Number(m.moq), price: Number(m.price)}));
+    PROD_MATERIALS = ALL_MATERIALS.filter(m => m.cat === "생산");
+    OUT_MATERIALS  = ALL_MATERIALS.filter(m => m.cat === "출고");
+    dataLoaded = true;
+    return true;
+  } catch(e) {
+    return false;
+  }
+}
 
 function n(v){return v==null?"-":Number(v).toLocaleString("ko-KR");}
 function parseQty(t){const m=t.match(/([0-9,]+)\s*개/);return m?parseInt(m[1].replace(/,/g,"")):null;}
@@ -154,25 +161,6 @@ function buildOrderHTML(items){
   return `<div class="ok-box">🟢 모든 부자재 충분합니다!</div>`;
 }
 
-function buildResultHTML(qty, product, prodItems, outItems, showProd, showOut){
-  const header=`<div class="result-header">
-    <div class="date">${TODAY} 기준</div>
-    <div class="main">${product?product+" ":""}<span class="qty">${n(qty)}개</span> 생산 분석 결과</div>
-  </div>`;
-  let body="";
-  if(showProd){
-    body+=`<div class="section-label section-prod">🔵 생산 부자재 (제품 봉제/제작 시 사용)</div>`;
-    body+=buildTable(prodItems);
-    body+=buildOrderHTML(prodItems);
-  }
-  if(showOut){
-    body+=`<div class="section-label section-out" style="margin-top:14px">🟢 출고 부자재 (포장/배송 시 사용)</div>`;
-    body+=buildTable(outItems);
-    body+=buildOrderHTML(outItems);
-  }
-  return header+body;
-}
-
 function buildStockHTML(materials, title, labelClass){
   const rows=materials.map((m,i)=>{
     const status=m.stock<m.safe?"🔴 발주 필요":m.stock<m.safe*1.5?"🟡 주의":"🟢 정상";
@@ -194,22 +182,6 @@ function buildStockHTML(materials, title, labelClass){
     </table></div>`;
 }
 
-function buildSupplierHTML(materials, title, labelClass){
-  const rows=materials.map((m,i)=>`<tr style="background:${i%2===0?"#fff":"#FAFAFA"}">
-    <td style="font-weight:700">${m.sup}</td>
-    <td>${m.name}</td>
-    <td style="font-size:12px;color:#1976D2;word-break:break-all">${m.contact||"-"}</td>
-    <td style="text-align:center">${n(m.moq)}</td>
-    <td style="text-align:center;font-weight:600;color:#1A237E">${n(m.price)}원</td>
-    <td style="text-align:center">${m.lead}</td>
-  </tr>`).join("");
-  return `<div class="section-label ${labelClass}">${title}</div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th>거래처</th><th>부자재명</th><th>연락처/URL</th><th>MOQ</th><th>단가</th><th>리드타임</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>`;
-}
-
 function addMsg(role,html){
   const wrap=document.createElement("div"); wrap.className=role==="user"?"msg-user":"msg-bot";
   const bubble=document.createElement("div"); bubble.className="bubble"; bubble.innerHTML=html;
@@ -218,7 +190,7 @@ function addMsg(role,html){
   wrap.scrollIntoView({behavior:"smooth",block:"end"});
   return bubble;
 }
-function showTyping(){return addMsg("bot",'<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:2px">계산 중…</span></div>');}
+function showTyping(){return addMsg("bot",'<div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div><span style="margin-left:2px">구글 시트에서 재고 불러오는 중…</span></div>');}
 
 async function send(preset){
   const txt=document.getElementById("txt");
@@ -226,48 +198,70 @@ async function send(preset){
   txt.value=""; document.getElementById("sendbtn").disabled=true;
   addMsg("user",msg);
   const tb=showTyping();
-  await new Promise(r=>setTimeout(r,500));
+
+  if(!dataLoaded){
+    const ok = await loadData();
+    if(!ok){
+      tb.parentElement.remove();
+      addMsg("bot","⚠️ 구글 시트 데이터를 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
+      document.getElementById("sendbtn").disabled=false;
+      return;
+    }
+  }
+
+  await new Promise(r=>setTimeout(r,300));
   tb.parentElement.remove();
 
   const lower=msg.toLowerCase();
   const qty=parseQty(msg);
-  const product=parseProd(msg);
   const isProd=lower.includes("생산")&&!lower.includes("출고");
   const isOut=lower.includes("출고")&&!lower.includes("생산");
   const isStockQ=lower.includes("재고")&&(lower.includes("현황")||lower.includes("보여")||lower.includes("알려"))&&!qty;
   const isSupQ=(lower.includes("거래처")||lower.includes("업체")||lower.includes("연락처"))&&!qty;
 
   if(isStockQ){
-    let html="";
-    if(isProd||(!isProd&&!isOut)){
-      html+=buildStockHTML(PROD_MATERIALS,"🔵 생산 부자재 재고 현황","section-prod");
-    }
-    if(isOut||(!isProd&&!isOut)){
-      html+=buildStockHTML(OUT_MATERIALS,"🟢 출고 부자재 재고 현황","section-out");
-    }
+    let html='<div style="font-size:12px;color:#888;margin-bottom:8px">📡 구글 시트 실시간 데이터</div>';
+    if(isProd||(!isProd&&!isOut)) html+=buildStockHTML(PROD_MATERIALS,"🔵 생산 부자재 재고 현황","section-prod");
+    if(isOut||(!isProd&&!isOut))  html+=buildStockHTML(OUT_MATERIALS,"🟢 출고 부자재 재고 현황","section-out");
     addMsg("bot",html);
   } else if(isSupQ){
-    let html="";
-    if(isProd||(!isProd&&!isOut)){
-      html+=buildSupplierHTML(PROD_MATERIALS,"🔵 생산 부자재 거래처","section-prod");
+    const all = isProd?PROD_MATERIALS:isOut?OUT_MATERIALS:ALL_MATERIALS;
+    const rows=all.map((m,i)=>`<tr style="background:${i%2===0?"#fff":"#FAFAFA"}">
+      <td class="${m.cat==="생산"?"cat-prod":"cat-out"}" style="text-align:center">${m.cat}</td>
+      <td style="font-weight:700">${m.sup}</td>
+      <td>${m.name}</td>
+      <td style="font-size:12px;color:#1976D2;word-break:break-all">${m.contact||"-"}</td>
+      <td style="text-align:center">${n(m.moq)}</td>
+      <td style="text-align:center;font-weight:600;color:#1A237E">${n(m.price)}원</td>
+    </tr>`).join("");
+    addMsg("bot",`<div class="tbl-wrap"><table>
+      <thead><tr><th>분류</th><th>거래처</th><th>부자재명</th><th>연락처/URL</th><th>MOQ</th><th>단가</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`);
+  } else if(qty){
+    const product=parseProd(msg);
+    const showProd=!isOut;
+    const showOut=isOut||(!isProd&&!isOut);
+    const prodItems=showProd?calcItems(PROD_MATERIALS,qty):[];
+    const outItems=showOut?calcItems(OUT_MATERIALS,qty):[];
+    let html=`<div class="result-header">
+      <div class="date">📡 구글 시트 실시간 데이터 · ${TODAY} 기준</div>
+      <div class="main">${product?product+" ":""}<span class="qty">${n(qty)}개</span> 생산 분석 결과</div>
+    </div>`;
+    if(showProd){
+      html+='<div class="section-label section-prod">🔵 생산 부자재</div>';
+      html+=buildTable(prodItems)+buildOrderHTML(prodItems);
     }
-    if(isOut||(!isProd&&!isOut)){
-      html+=buildSupplierHTML(OUT_MATERIALS,"🟢 출고 부자재 거래처","section-out");
+    if(showOut){
+      html+='<div class="section-label section-out" style="margin-top:14px">🟢 출고 부자재</div>';
+      html+=buildTable(outItems)+buildOrderHTML(outItems);
     }
     addMsg("bot",html);
-  } else if(qty){
-    const showProd = !isOut;
-    const showOut  = isOut || (!isProd && !isOut);
-    const prodItems = showProd ? calcItems(PROD_MATERIALS, qty) : [];
-    const outItems  = showOut  ? calcItems(OUT_MATERIALS,  qty) : [];
-    addMsg("bot", buildResultHTML(qty, product, prodItems, outItems, showProd, showOut));
   } else {
     const system=`당신은 패션 브랜드 부자재 재고 관리 전문 어시스턴트입니다.
-부자재는 두 가지로 분류됩니다:
-[생산 부자재] 로고라벨(재고500), 케어라벨(재고500), 로고 행택(재고500), 무지 행택(재고500), 행택 끈(재고500)
-[출고 부자재] 출고용 택배 박스(재고32), 입고용 카톤 박스(재고110), 더스트백(재고700)
-생산 관련 질문 → 생산 부자재만, 출고/포장 관련 질문 → 출고 부자재만 답변하세요.
-짧고 명확하게 한국어로 답변하세요.`;
+현재 부자재 데이터(${TODAY} 기준, 구글 시트 실시간):
+[생산] ${PROD_MATERIALS.map(m=>`${m.name}(재고${m.stock})`).join(", ")}
+[출고] ${OUT_MATERIALS.map(m=>`${m.name}(재고${m.stock})`).join(", ")}
+생산 관련 → 생산 부자재만, 출고/포장 → 출고 부자재만 답변하세요. 짧고 명확하게 한국어로.`;
     try{
       const res=await fetch("https://api.anthropic.com/v1/messages",{
         method:"POST",headers:{"Content-Type":"application/json"},
@@ -276,22 +270,25 @@ async function send(preset){
       const data=await res.json();
       const text=(data.content||[]).map(c=>c.text||"").join("")||"죄송해요, 다시 질문해주세요.";
       addMsg("bot",text.replace(/\n/g,"<br>"));
-    }catch(e){addMsg("bot","⚠️ 오류가 발생했어요. 잠시 후 다시 시도해주세요.");}
+    }catch(e){addMsg("bot","⚠️ 오류가 발생했어요.");}
   }
   document.getElementById("sendbtn").disabled=false;
 }
 
-addMsg("bot",`<div>
-  <div style="font-size:28px;margin-bottom:8px">📦</div>
-  <div style="font-weight:700;font-size:15px;margin-bottom:6px">부자재 AI 계산기예요!</div>
-  <div style="color:#555;margin-bottom:12px;font-size:14px">생산/출고 부자재를 분리해서 관리해요.</div>
-  <div style="font-size:12px;color:#888;background:#F8F8F8;border-radius:8px;padding:10px 14px;line-height:1.9">
-    🔵 <b>생산 부자재</b>: 로고라벨, 케어라벨, 행택, 행택 끈<br>
-    🟢 <b>출고 부자재</b>: 택배 박스, 카톤 박스, 더스트백<br><br>
-    💡 "300개 생산할 때 생산 부자재 알려줘"<br>
-    💡 "출고 부자재 재고 현황 보여줘"
-  </div>
-</div>`);
+// 시작 시 데이터 미리 로드
+loadData().then(ok=>{
+  addMsg("bot",`<div>
+    <div style="font-size:28px;margin-bottom:8px">📦</div>
+    <div style="font-weight:700;font-size:15px;margin-bottom:6px">부자재 AI 계산기예요!</div>
+    <div style="color:#555;margin-bottom:12px;font-size:14px">${ok?"✅ 구글 시트 실시간 연동 완료":"⚠️ 데이터 로딩 중... 잠시 후 다시 시도해주세요"}</div>
+    <div style="font-size:12px;color:#888;background:#F8F8F8;border-radius:8px;padding:10px 14px;line-height:1.9">
+      🔵 <b>생산 부자재</b>: 로고라벨, 케어라벨, 행택, 행택 끈<br>
+      🟢 <b>출고 부자재</b>: 택배 박스, 카톤 박스, 더스트백<br><br>
+      💡 "300개 생산할 때 생산 부자재 알려줘"<br>
+      💡 "출고 부자재 재고 현황 보여줘"
+    </div>
+  </div>`);
+});
 </script>
 </body>
 </html>
