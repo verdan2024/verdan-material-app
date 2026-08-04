@@ -178,6 +178,17 @@ function logout(){
   document.getElementById('app').style.display='none';
   document.getElementById('gate').style.display='flex';
   document.getElementById('pw').value='';
+  document.getElementById('t3').style.display='none';   // 권한 흔적 제거
+  ['fCode','fKind','fReason'].forEach(function(id){
+    document.getElementById(id).innerHTML = '';
+  });
+  ['fQty','fRef','fMemo','cQty'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('stockBody').innerHTML = '';
+  document.getElementById('vendorBody').innerHTML = '';
+  document.getElementById('calcBody').innerHTML = '';
+  tab('p1');
   gm('');
 }
 
@@ -198,13 +209,24 @@ function start(r){
   });
   fill('cDesign', designs.map(function(d){ return {v:d.code, t:d.name}; }), '제품 선택');
 
-  if(ROLE==='edit'){
-    document.getElementById('t3').style.display='block';
+  const isEdit = (ROLE === 'edit');
+  document.getElementById('t3').style.display = isEdit ? 'block' : 'none';
+  if(isEdit){
     fill('fCode', r.materials.map(function(m){ return {v:m.code, t:m.code+' · '+m.name}; }), '부자재 선택');
     fill('fKind',   r.kinds.map(function(k){ return {v:k,t:k}; }),   '구분 선택');
     fill('fReason', r.reasons.map(function(k){ return {v:k,t:k}; }), '사유 선택');
+  } else {
+    // 조회 전용: 이전 세션 흔적을 완전히 지운다
+    ['fCode','fKind','fReason'].forEach(function(id){
+      document.getElementById(id).innerHTML = '';
+    });
+    ['fQty','fRef','fMemo'].forEach(function(id){
+      document.getElementById(id).value = '';
+    });
+    lm('', false);
   }
   renderStock(); renderVendors();
+  tab('p1');
 }
 
 function fill(id, items, ph){
