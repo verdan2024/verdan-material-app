@@ -2,15 +2,30 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>버던_재고</title>
+
+<!-- ── 홈화면 앱 설정 ─────────────────────────────
+     apple-touch-icon.png 는 이 파일과 같은 폴더에 두세요. -->
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="apple-touch-icon.png">
+
+<!-- 주소창 제거 (독립 앱 모드) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="버던재고">
+<meta name="theme-color" content="#1A1A2E">
+<!-- ──────────────────────────────────────────── -->
+
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;background:#F5F6FA;
      min-height:100vh;display:flex;flex-direction:column;-webkit-text-size-adjust:100%;}
 
 /* 로그인 */
-#gate{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;}
+#gate{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;
+     padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));}
 #gate .box{width:100%;max-width:340px;background:#fff;border-radius:16px;padding:28px 24px;
      box-shadow:0 2px 12px rgba(0,0,0,.06);text-align:center;}
 #gate .logo{font-size:34px;margin-bottom:10px;}
@@ -25,7 +40,10 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;backgrou
 
 /* 앱 */
 #app{display:none;flex-direction:column;min-height:100vh;}
-#header{background:#1A1A2E;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px;}
+/* 상태바(시계·배터리) 아래로 헤더가 파고들지 않도록 안전영역 확보 */
+#header{background:#1A1A2E;color:#fff;
+     padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+     display:flex;align-items:center;gap:10px;}
 #header .icon{width:36px;height:36px;border-radius:50%;background:#3F51B5;display:flex;
      align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
 #header .title{font-weight:700;font-size:14px;}
@@ -86,7 +104,9 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
      margin-bottom:12px;font-size:12px;color:#7D5A00;line-height:1.7;}
 .msg{font-size:13px;margin-top:8px;min-height:18px;}
 .msg.err{color:#C0392B;} .msg.good{color:#1B5E20;}
-.foot{font-size:11px;color:#AAA;text-align:center;padding:14px 0;}
+/* 홈 인디케이터(하단 막대)에 버튼이 가리지 않도록 여백 확보 */
+.foot{font-size:11px;color:#AAA;text-align:center;
+     padding:14px 0 calc(14px + env(safe-area-inset-bottom));}
 </style>
 </head>
 <body>
@@ -102,7 +122,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
            onkeydown="if(event.key==='Enter')login()">
     <button onclick="login()">확인</button>
     <div id="gateMsg"></div>
-    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.8 · 2026-08-08</div>
+    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.9 · 2026-08-08</div>
   </div>
 </div>
 
@@ -171,7 +191,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
-    <div class="sub2" style="margin-top:10px">버던_재고 · v3.8</div>
+    <div class="sub2" style="margin-top:10px">버던_재고 · v3.9</div>
   </div>
 </div>
 
