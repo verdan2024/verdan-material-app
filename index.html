@@ -49,6 +49,10 @@ details summary::-webkit-details-marker{display:none;}
 details summary::before{content:'▸ ';}
 details[open] summary::before{content:'▾ ';}
 details .tbl-wrap{margin-top:8px;}
+.lnk{color:#1976D2;font-weight:600;cursor:pointer;border-bottom:1px solid #BBDEFB;}
+.vd{background:#FAFAFC;font-size:12px;line-height:2.0;}
+.vd b{display:inline-block;min-width:70px;color:#999;font-weight:600;}
+.vd a{color:#1976D2;}
 .page.on{display:block;}
 
 .card{background:#fff;border:1px solid #E8E8E8;border-radius:12px;padding:14px;margin-bottom:12px;}
@@ -96,7 +100,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
            onkeydown="if(event.key==='Enter')login()">
     <button onclick="login()">확인</button>
     <div id="gateMsg"></div>
-    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.3 · 2026-08-08</div>
+    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.4 · 2026-08-08</div>
   </div>
 </div>
 
@@ -169,7 +173,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
-    <div class="sub2" style="margin-top:10px">버던_재고 · v3.3</div>
+    <div class="sub2" style="margin-top:10px">버던_재고 · v3.4</div>
   </div>
 </div>
 
@@ -339,12 +343,13 @@ function 디자인명(name){
   return i > 0 ? n.substring(0, i) : n;
 }
 
-function 제품표(rows){
+function 제품표(rows, 상품명표시){
   const body = rows.map(function(x){
     const zero = x.tot <= 0;
+    const sub = 상품명표시 ? esc(x.name) : esc(x.code);
     return '<tr>'+
       '<td><b>'+esc(x.opt || 디자인명(x.name))+'</b>'+
-        '<div class="sub2">'+esc(x.code)+'</div></td>'+
+        '<div class="sub2">'+sub+'</div></td>'+
       '<td class="num">'+n(x.wh)+'</td>'+
       '<td class="num">'+n(x.ff)+'</td>'+
       '<td class="num '+(zero?'danger':'')+'">'+(zero ? '품절' : n(x.tot))+'</td></tr>';
@@ -367,8 +372,9 @@ function renderProducts(){
 
   const items = P.items || [];
   const 정상 = items.filter(function(x){ return x.kind === '정상품'; });
-  const 리퍼브 = items.filter(function(x){ return x.kind.indexOf('리퍼브') >= 0; });
-  const 협찬  = items.filter(function(x){ return x.kind.indexOf('협찬')  >= 0; });
+  /* 리퍼브·협찬은 재고가 있는 것만 — 0은 볼 이유가 없다 */
+  const 리퍼브 = items.filter(function(x){ return x.kind.indexOf('리퍼브') >= 0 && x.tot > 0; });
+  const 협찬  = items.filter(function(x){ return x.kind.indexOf('협찬')  >= 0 && x.tot > 0; });
   const 합 = function(a){ return a.reduce(function(s,x){ return s + x.tot; }, 0); };
 
   if(!정상.length){
@@ -376,15 +382,7 @@ function renderProducts(){
     return;
   }
 
-  const 품절 = 정상.filter(function(x){ return x.tot <= 0; });
-  let h = '<div class="'+(품절.length ? 'box-note' : 'box-ok')+'">'+
-    '정상품 '+정상.length+'종 · 총 <b>'+n(합(정상))+'개</b>'+
-    (품절.length
-      ? '<br>🔴 품절 '+품절.length+'종 — '+품절.map(function(x){
-          return esc(디자인명(x.name)+' '+(x.opt||''));
-        }).join(', ')
-      : '')+
-    '</div>';
+  let h = '<div class="box-ok">정상품 '+정상.length+'종 · 총 <b>'+n(합(정상))+'개</b></div>';
 
   /* 디자인별 묶음 — 원본 순서를 따른다 */
   const groups = [];
@@ -396,14 +394,23 @@ function renderProducts(){
     g.rows.push(x);
   });
   groups.forEach(function(g){
-    h += '<div class="sec sec-prod">'+esc(g.name)+' · '+n(합(g.rows))+'개</div>' + 제품표(g.rows);
+    h += '<div class="sec sec-prod">'+esc(g.name)+' · '+n(합(g.rows))+'개</div>' + 제품표(g.rows, false);
   });
 
-  if(리퍼브.length) h += '<details><summary>리퍼브 제품 · '+n(합(리퍼브))+'개</summary>'+제품표(리퍼브)+'</details>';
-  if(협찬.length)   h += '<details><summary>협찬 제품 · '+n(합(협찬))+'개</summary>'+제품표(협찬)+'</details>';
+  /* 품절 알림 — 정상품 아래, 리퍼브 위 */
+  const 품절 = 정상.filter(function(x){ return x.tot <= 0; });
+  if(품절.length){
+    h += '<div class="box-note">🔴 <b>품절 '+품절.length+'종</b><br>'+
+      품절.map(function(x){ return esc(디자인명(x.name)+' · '+(x.opt||'')); }).join('<br>')+
+      '</div>';
+  }
+
+  if(리퍼브.length) h += '<details><summary>리퍼브 제품 · '+n(합(리퍼브))+'개</summary>'+제품표(리퍼브, true)+'</details>';
+  if(협찬.length)   h += '<details><summary>협찬 제품 · '+n(합(협찬))+'개</summary>'+제품표(협찬, true)+'</details>';
 
   h += '<div class="sub2" style="line-height:1.7">· 재고관리_메인 시트를 그대로 읽습니다. 앱에서는 수정할 수 없습니다.<br>'+
-       '· 창고는 자사 보관, 풀필은 위탁 보관 수량입니다.</div>';
+       '· 창고는 자사 보관, 풀필은 위탁 보관 수량입니다.<br>'+
+       '· 리퍼브·협찬은 재고가 있는 것만 표시합니다.</div>';
   box.innerHTML = h;
 }
 
@@ -412,22 +419,54 @@ function renderStock(){
   const prod = D.materials.filter(function(m){ return m.cat==='생산'; });
   const out  = D.materials.filter(function(m){ return m.cat==='출고'; });
   document.getElementById('stockBody').innerHTML =
-    section('🔵 생산 부자재','sec-prod',prod) + section('🟢 출고 부자재','sec-out',out) + note();
+    section('🔵 생산 부자재','sec-prod',prod) +
+    section('🟢 출고 부자재','sec-out',out) +
+    발주알림() + note();
 }
 
 function section(title, cls, list){
   if(!list.length) return '';
   const rows = list.map(function(m){
-    const sub = esc(m.owner) + (m.sup ? ' · ' + esc(m.sup) : '');
+    const id = 'ven_' + m.code;
+    const cell = m.sup
+      ? '<span class="lnk" onclick="venToggle(\''+id+'\')">'+esc(m.sup)+'</span>'
+      : '<span class="sub2">—</span>';
     return '<tr>'+
-      '<td><b>'+esc(m.name)+'</b><div class="sub2">'+sub+'</div></td>'+
+      '<td><b>'+esc(m.name)+'</b><div class="sub2">'+esc(m.code)+'</div></td>'+
       '<td class="num">'+n(m.stock)+'</td>'+
-      '<td class="num">'+(m.mos===''||m.mos==='—'?'—':n(m.mos))+'</td>'+
-      '<td class="ctr" style="font-size:12px">'+esc(m.state)+'</td></tr>';
+      '<td class="ctr" style="font-size:12px">'+cell+'</td></tr>'+
+      '<tr id="'+id+'" style="display:none"><td colspan="3" class="vd">'+venCard(m.vcode)+'</td></tr>';
   }).join('');
   return '<div class="sec '+cls+'">'+title+'</div><div class="tbl-wrap"><table>'+
-    '<thead><tr><th style="text-align:left">부자재</th><th>재고</th><th>개월</th><th>상태</th></tr></thead>'+
+    '<thead><tr><th style="text-align:left">부자재</th><th>수량</th><th>거래처</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table></div>';
+}
+
+function venToggle(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.style.display = (el.style.display === 'none') ? 'table-row' : 'none';
+}
+
+function venCard(vcode){
+  const v = (D.vendors || []).filter(function(x){ return x.vcode === vcode; })[0];
+  if(!v) return '<span class="sub2">거래처마스터에 '+esc(vcode||'코드 없음')+' 정보가 없습니다.</span>';
+  return '<div><b>거래처코드</b> '+esc(v.vcode)+'</div>'+
+    '<div><b>거래처명</b> '+esc(v.name)+'</div>'+
+    '<div><b>담당자</b> '+esc(v.person || '—')+'</div>'+
+    '<div><b>연락처</b> '+(v.tel
+      ? '<a href="tel:'+esc(v.tel.replace(/[^0-9+]/g,''))+'">'+esc(v.tel)+'</a>' : '—')+'</div>'+
+    '<div><b>URL</b> '+(v.url
+      ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크 열기</a>' : '—')+'</div>';
+}
+
+/* 신호등 열을 뺐으므로, 발주가 필요한 것만 따로 알린다 */
+function 발주알림(){
+  const need = D.materials.filter(function(m){ return m.state && m.state.indexOf('🔴') >= 0; });
+  if(!need.length) return '';
+  return '<div class="box-danger"><b style="color:#C0392B">🔴 발주 필요 '+need.length+'종</b><br>'+
+    need.map(function(m){ return esc(m.name)+(m.sup ? ' · '+esc(m.sup) : ''); }).join('<br>')+
+    '</div>';
 }
 
 function note(){
