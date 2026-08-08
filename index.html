@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>부자재 재고 계산기</title>
+<title>버던_생산팀</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;background:#F5F6FA;
@@ -21,6 +21,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;backgrou
 #gate button{width:100%;padding:13px;border:none;border-radius:10px;background:#1A1A2E;color:#fff;
      font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;}
 #gateMsg{font-size:13px;color:#C0392B;margin-top:12px;min-height:18px;}
+#gate .hint{font-size:11px;color:#AAA;margin-top:10px;line-height:1.6;}
 
 /* 앱 */
 #app{display:none;flex-direction:column;min-height:100vh;}
@@ -32,8 +33,9 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;backgrou
 #header .role{margin-left:auto;font-size:11px;background:#3F51B5;padding:3px 9px;border-radius:10px;
      white-space:nowrap;}
 #tabs{display:flex;background:#fff;border-bottom:1px solid #EEE;}
-#tabs button{flex:1;padding:12px;border:none;background:none;font-size:13px;font-weight:600;
-     color:#888;font-family:inherit;cursor:pointer;border-bottom:2px solid transparent;}
+#tabs button{flex:1;padding:12px 6px;border:none;background:none;font-size:13px;font-weight:600;
+     color:#888;font-family:inherit;cursor:pointer;border-bottom:2px solid transparent;
+     white-space:nowrap;}
 #tabs button.on{color:#1A1A2E;border-bottom-color:#1A1A2E;}
 .page{padding:16px;display:none;}
 .page.on{display:block;}
@@ -76,11 +78,14 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
 <div id="gate">
   <div class="box">
     <div class="logo">📦</div>
-    <h1>부자재 재고</h1>
+    <h1>버던_생산팀</h1>
+    <input type="text" id="nm" placeholder="이름" autocomplete="name" maxlength="20"
+           onkeydown="if(event.key==='Enter')document.getElementById('pw').focus()">
     <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password"
            onkeydown="if(event.key==='Enter')login()">
     <button onclick="login()">확인</button>
     <div id="gateMsg"></div>
+    <div class="hint">이름은 입출고 기록을 되짚을 때 씁니다.</div>
   </div>
 </div>
 
@@ -89,7 +94,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div id="header">
     <div class="icon">📦</div>
     <div>
-      <div class="title">부자재 재고</div>
+      <div class="title">버던_생산팀</div>
       <div class="sub" id="updated"></div>
     </div>
     <div class="role" id="roleBadge"></div>
@@ -99,7 +104,8 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
     <button id="t1" class="on" onclick="tab('p1')">재고</button>
     <button id="t2" onclick="tab('p2')">생산 계산</button>
     <button id="t3" onclick="tab('p3')" style="display:none">입출고</button>
-    <button id="t4" onclick="tab('p4')">거래처</button>
+    <button id="t4" onclick="tab('p4')" style="display:none">거래처</button>
+    <button id="t5" onclick="tab('p5')" style="display:none">접근로그</button>
   </div>
 
   <!-- 재고 -->
@@ -138,6 +144,12 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <!-- 거래처 -->
   <div id="p4" class="page"><div id="vendorBody"></div></div>
 
+  <!-- 접근로그 -->
+  <div id="p5" class="page">
+    <div id="accessBody"></div>
+    <button class="f ghost" onclick="loadAccess()">새로고침</button>
+  </div>
+
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
@@ -145,49 +157,69 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
 </div>
 
 <script>
-/* ⚠️ 본인의 Apps Script 웹앱 URL로 바꾸세요 (기존 것 그대로 쓰셔도 됩니다) */
+/* ⚠️ Apps Script 웹앱 URL (기존 것 그대로 두시면 됩니다) */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const KEY_STORE = 'bujae_pw';
-let PW = '', ROLE = '', D = null;
+const PW_STORE = 'verdan_pw';
+const NM_STORE = 'verdan_user';
+
+/* 권한표 — 서버의 ROLES와 짝을 맞춘다 */
+const PERM = {
+  admin : { label:'관리자', log:true,  vendor:true,  access:true  },
+  staff : { label:'담당자', log:true,  vendor:true,  access:false },
+  guest : { label:'게스트', log:false, vendor:false, access:false }
+};
+const NOPERM = { label:'—', log:false, vendor:false, access:false };
+
+let PW = '', USER = '', ROLE = '', D = null, accessLoaded = false;
 
 /* ── 통신 ─────────────────────────────── */
 async function api(params){
-  const q = new URLSearchParams(Object.assign({ key: PW }, params || {}));
+  const q = new URLSearchParams(Object.assign({ key: PW, user: USER }, params || {}));
   const res = await fetch(SCRIPT_URL + '?' + q.toString());
   return await res.json();
 }
 
 /* ── 로그인 ───────────────────────────── */
 async function login(){
+  const nm = document.getElementById('nm').value.trim();
   const pw = document.getElementById('pw').value.trim();
+  if(!nm){ gm('이름을 입력하세요.'); return; }
   if(!pw){ gm('비밀번호를 입력하세요.'); return; }
   gm('확인 중...');
-  PW = pw;
+  PW = pw; USER = nm;
   try{
     const r = await api();
-    if(!r.ok){ PW=''; gm(r.msg || '비밀번호가 올바르지 않습니다.'); return; }
-    try{ localStorage.setItem(KEY_STORE, pw); }catch(e){}
+    if(!r.ok){ PW=''; USER=''; gm(r.msg || '비밀번호가 올바르지 않습니다.'); return; }
+    try{
+      localStorage.setItem(PW_STORE, pw);
+      localStorage.setItem(NM_STORE, nm);
+    }catch(e){}
     start(r);
-  }catch(e){ PW=''; gm('연결 실패: ' + e.message); }
+  }catch(e){ PW=''; USER=''; gm('연결 실패: ' + e.message); }
 }
 
 function logout(){
-  try{ localStorage.removeItem(KEY_STORE); }catch(e){}
-  PW=''; ROLE=''; D=null;
+  try{ localStorage.removeItem(PW_STORE); }catch(e){}   // 이름은 남겨 재입력을 줄인다
+  PW=''; USER=''; ROLE=''; D=null; accessLoaded=false;
   document.getElementById('app').style.display='none';
   document.getElementById('gate').style.display='flex';
   document.getElementById('pw').value='';
-  document.getElementById('t3').style.display='none';   // 권한 흔적 제거
-  ['fCode','fKind','fReason'].forEach(function(id){
-    document.getElementById(id).innerHTML = '';
+  /* 권한 흔적 제거 — 로그인 때 다시 켠다 */
+  ['t3','t4','t5'].forEach(function(id){
+    document.getElementById(id).style.display='none';
+  });
+  document.getElementById('roleBadge').textContent='';
+  ['fCode','fKind','fReason','cDesign'].forEach(function(id){
+    document.getElementById(id).innerHTML='';
   });
   ['fQty','fRef','fMemo','cQty'].forEach(function(id){
-    document.getElementById(id).value = '';
+    document.getElementById(id).value='';
   });
-  document.getElementById('stockBody').innerHTML = '';
-  document.getElementById('vendorBody').innerHTML = '';
-  document.getElementById('calcBody').innerHTML = '';
+  ['stockBody','vendorBody','calcBody','accessBody'].forEach(function(id){
+    document.getElementById(id).innerHTML='';
+  });
+  lm('', false);
   tab('p1');
   gm('');
 }
@@ -197,35 +229,52 @@ function gm(t){ document.getElementById('gateMsg').textContent = t; }
 /* ── 화면 구성 ────────────────────────── */
 function start(r){
   D = r; ROLE = r.role;
+  const perm = PERM[ROLE] || NOPERM;
+
   document.getElementById('gate').style.display='none';
   document.getElementById('app').style.display='flex';
-  document.getElementById('roleBadge').textContent = (ROLE==='edit' ? '입력 가능' : '조회 전용');
+  document.getElementById('roleBadge').textContent = perm.label;
   document.getElementById('updated').textContent = '갱신 ' + r.updated;
 
+  /* 탭 노출 — 권한마다 매번 명시적으로 켜고 끈다 */
+  document.getElementById('t3').style.display = perm.log    ? 'block' : 'none';
+  document.getElementById('t4').style.display = perm.vendor ? 'block' : 'none';
+  document.getElementById('t5').style.display = perm.access ? 'block' : 'none';
+
+  /* 생산 계산 */
   const designs = [];
   r.bom.forEach(function(b){
     if(!designs.some(function(d){ return d.code===b.dcode; }))
       designs.push({ code:b.dcode, name:b.dname });
   });
   fill('cDesign', designs.map(function(d){ return {v:d.code, t:d.name}; }), '제품 선택');
+  document.getElementById('cQty').value='';
+  document.getElementById('calcBody').innerHTML='';
 
-  const isEdit = (ROLE === 'edit');
-  document.getElementById('t3').style.display = isEdit ? 'block' : 'none';
-  if(isEdit){
+  /* 입출고 */
+  if(perm.log){
     fill('fCode', r.materials.map(function(m){ return {v:m.code, t:m.code+' · '+m.name}; }), '부자재 선택');
     fill('fKind',   r.kinds.map(function(k){ return {v:k,t:k}; }),   '구분 선택');
     fill('fReason', r.reasons.map(function(k){ return {v:k,t:k}; }), '사유 선택');
   } else {
-    // 조회 전용: 이전 세션 흔적을 완전히 지운다
     ['fCode','fKind','fReason'].forEach(function(id){
-      document.getElementById(id).innerHTML = '';
+      document.getElementById(id).innerHTML='';
     });
     ['fQty','fRef','fMemo'].forEach(function(id){
-      document.getElementById(id).value = '';
+      document.getElementById(id).value='';
     });
     lm('', false);
   }
-  renderStock(); renderVendors();
+
+  /* 거래처 */
+  if(perm.vendor) renderVendors();
+  else document.getElementById('vendorBody').innerHTML='';
+
+  /* 접근로그 — 탭을 열 때 불러온다 */
+  accessLoaded = false;
+  document.getElementById('accessBody').innerHTML='';
+
+  renderStock();
   tab('p1');
 }
 
@@ -236,11 +285,12 @@ function fill(id, items, ph){
 }
 
 function tab(p){
-  ['p1','p2','p3','p4'].forEach(function(x,i){
-    document.getElementById(x).className = 'page' + (x===p?' on':'');
-    const b = document.getElementById('t'+(i+1));
-    b.className = (x===p ? 'on' : '');
-  });
+  for(var i=1;i<=5;i++){
+    var on = ('p'+i)===p;
+    document.getElementById('p'+i).className = 'page' + (on?' on':'');
+    document.getElementById('t'+i).className = on ? 'on' : '';
+  }
+  if(p==='p5' && !accessLoaded) loadAccess();
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
@@ -259,8 +309,9 @@ function renderStock(){
 function section(title, cls, list){
   if(!list.length) return '';
   const rows = list.map(function(m){
+    const sub = esc(m.owner) + (m.sup ? ' · ' + esc(m.sup) : '');
     return '<tr>'+
-      '<td><b>'+esc(m.name)+'</b><div class="sub2">'+esc(m.owner)+' · '+esc(m.sup)+'</div></td>'+
+      '<td><b>'+esc(m.name)+'</b><div class="sub2">'+sub+'</div></td>'+
       '<td class="num">'+n(m.stock)+'</td>'+
       '<td class="num">'+(m.mos===''||m.mos==='—'?'—':n(m.mos))+'</td>'+
       '<td class="ctr" style="font-size:12px">'+esc(m.state)+'</td></tr>';
@@ -332,11 +383,16 @@ function calc(){
   if(short.length){
     alert = '<div class="box-danger"><b style="color:#C0392B">🔴 발주 검토 ('+short.length+'종)</b><br><br>'+
       short.map(function(it){
-        return '▸ <b>'+esc(it.b.name)+'</b><br>'+
+        const price = num(it.m.price);
+        let line = '▸ <b>'+esc(it.b.name)+'</b><br>'+
           '생산 후 잔여 <b class="danger">'+n(it.rem)+'개</b>'+
           (it.remMos!==null ? ' (약 '+it.remMos+'개월치)' : '')+'<br>'+
-          '권장 발주 <b>'+n(it.order)+'개</b> · MOQ '+n(it.m.moq)+' · '+esc(it.m.sup||'-')+'<br>'+
-          '<span class="sub2">예상 '+n(it.order*(num(it.m.price)||0))+'원 · 리드타임 '+n(it.m.lead)+'일</span>';
+          '권장 발주 <b>'+n(it.order)+'개</b> · MOQ '+n(it.m.moq)+
+          (it.m.sup ? ' · '+esc(it.m.sup) : '')+'<br>';
+        line += '<span class="sub2">' +
+          (price ? '예상 '+n(it.order*price)+'원 · ' : '') +
+          '리드타임 '+n(it.m.lead)+'일</span>';
+        return line;
       }).join('<br><br>')+'</div>';
   } else {
     alert = '<div class="box-ok">🟢 생산 후에도 3개월치 이상 남습니다. 발주 불필요.</div>';
@@ -377,6 +433,7 @@ async function submitLog(){
     document.getElementById('logMsg').className = 'msg good';
     ['fQty','fRef','fMemo'].forEach(function(id){ document.getElementById(id).value=''; });
     renderStock();
+    accessLoaded = false;   // 방금 남긴 기록이 반영되도록
     document.getElementById('updated').textContent = '갱신 ' + r.updated;
     setTimeout(function(){ tab('p1'); lm('',false); }, 900);
   }catch(e){ lm('오류: '+e.message, true); }
@@ -402,30 +459,72 @@ function renderVendors(){
     '<div class="sub2">단가·MOQ는 시트의 [공급품목] 탭에서 관리합니다.</div>';
 }
 
+/* ── 접근로그 (관리자) ────────────────── */
+async function loadAccess(){
+  const body = document.getElementById('accessBody');
+  body.innerHTML = '<div class="box-note">불러오는 중...</div>';
+  try{
+    const r = await api({ action:'access' });
+    if(!r.ok){
+      body.innerHTML = '<div class="box-note">'+esc(r.msg || '불러오지 못했습니다.')+'</div>';
+      return;
+    }
+    accessLoaded = true;
+    if(!r.logs.length){
+      body.innerHTML = '<div class="box-note">기록이 없습니다.</div>'; return;
+    }
+    const rows = r.logs.map(function(l){
+      let cls = '';
+      if(l.result==='실패' || l.result==='입력거부' || l.result==='열람거부') cls='danger';
+      else if(l.result==='입력') cls='ok';
+      return '<tr>'+
+        '<td class="sub2" style="white-space:nowrap">'+esc(l.t)+'</td>'+
+        '<td class="ctr '+cls+'" style="font-size:12px;white-space:nowrap">'+esc(l.result)+'</td>'+
+        '<td style="font-size:12px;white-space:nowrap">'+esc(l.user||'—')+'</td>'+
+        '<td style="font-size:12px">'+esc(l.memo)+'</td></tr>';
+    }).join('');
+    body.innerHTML =
+      '<div class="tbl-wrap"><table><thead><tr>'+
+      '<th>시각</th><th>결과</th><th>사용자</th><th style="text-align:left">상세</th>'+
+      '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="sub2">최근 '+r.logs.length+'건 · 시트에는 500건까지 보관됩니다.</div>';
+  }catch(e){
+    body.innerHTML = '<div class="box-note">연결 실패: '+esc(e.message)+'</div>';
+  }
+}
+
 /* ── 새로고침 ─────────────────────────── */
 async function reload(){
   try{
     const r = await api();
     if(!r.ok){ logout(); gm('다시 로그인해 주세요.'); return; }
-    D = r; renderStock(); renderVendors();
+    if(r.role !== ROLE){ start(r); return; }   // 권한이 바뀌었으면 화면을 다시 짠다
+    D = r; renderStock();
+    if((PERM[ROLE]||NOPERM).vendor) renderVendors();
     document.getElementById('updated').textContent = '갱신 ' + r.updated;
   }catch(e){}
 }
 
 /* ── 자동 로그인 ──────────────────────── */
 (async function(){
-  let saved = null;
-  try{ saved = localStorage.getItem(KEY_STORE); }catch(e){}
-  if(!saved) return;
-  PW = saved; gm('확인 중...');
+  let savedPw = null, savedNm = null;
+  try{
+    savedPw = localStorage.getItem(PW_STORE);
+    savedNm = localStorage.getItem(NM_STORE);
+    localStorage.removeItem('bujae_pw');   // 구 버전 잔재 정리
+  }catch(e){}
+  if(savedNm) document.getElementById('nm').value = savedNm;
+  if(!savedPw || !savedNm) return;
+  PW = savedPw; USER = savedNm; gm('확인 중...');
   try{
     const r = await api();
     if(r.ok){ start(r); }
     else {
-      PW=''; try{ localStorage.removeItem(KEY_STORE); }catch(e){}
+      PW=''; USER='';
+      try{ localStorage.removeItem(PW_STORE); }catch(e){}
       gm('비밀번호가 변경되었습니다. 다시 입력해 주세요.');
     }
-  }catch(e){ PW=''; gm(''); }
+  }catch(e){ PW=''; USER=''; gm(''); }
 })();
 </script>
 </body>
