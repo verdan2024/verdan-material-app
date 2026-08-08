@@ -102,7 +102,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
            onkeydown="if(event.key==='Enter')login()">
     <button onclick="login()">확인</button>
     <div id="gateMsg"></div>
-    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.5 · 2026-08-08</div>
+    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.6 · 2026-08-08</div>
   </div>
 </div>
 
@@ -121,8 +121,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
     <button id="t1" class="on" onclick="tab('p1')">재고</button>
     <button id="t2" onclick="tab('p2')">생산 계산</button>
     <button id="t3" onclick="tab('p3')" style="display:none">입출고</button>
-    <button id="t4" onclick="tab('p4')" style="display:none">거래처</button>
-    <button id="t5" onclick="tab('p5')" style="display:none">접근로그</button>
+    <button id="t4" onclick="tab('p4')" style="display:none">접근로그</button>
   </div>
 
   <!-- 재고 -->
@@ -163,11 +162,8 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
     </div>
   </div>
 
-  <!-- 거래처 -->
-  <div id="p4" class="page"><div id="vendorBody"></div></div>
-
   <!-- 접근로그 -->
-  <div id="p5" class="page">
+  <div id="p4" class="page">
     <div id="accessBody"></div>
     <button class="f ghost" onclick="loadAccess()">새로고침</button>
   </div>
@@ -175,7 +171,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
-    <div class="sub2" style="margin-top:10px">버던_재고 · v3.5</div>
+    <div class="sub2" style="margin-top:10px">버던_재고 · v3.6</div>
   </div>
 </div>
 
@@ -234,7 +230,7 @@ function logout(){
   document.getElementById('gate').style.display='flex';
   document.getElementById('pw').value='';
   /* 권한 흔적 제거 — 로그인 때 다시 켠다 */
-  ['t3','t4','t5'].forEach(function(id){
+  ['t3','t4'].forEach(function(id){
     document.getElementById(id).style.display='none';
   });
   document.getElementById('roleBadge').textContent='';
@@ -244,7 +240,7 @@ function logout(){
   ['fQty','fRef','fMemo','cQty'].forEach(function(id){
     document.getElementById(id).value='';
   });
-  ['prodBody','stockBody','vendorBody','calcBody','accessBody'].forEach(function(id){
+  ['prodBody','stockBody','calcBody','accessBody'].forEach(function(id){
     document.getElementById(id).innerHTML='';
   });
   stockView('prod');
@@ -267,8 +263,7 @@ function start(r){
 
   /* 탭 노출 — 권한마다 매번 명시적으로 켜고 끈다 */
   document.getElementById('t3').style.display = perm.log    ? 'block' : 'none';
-  document.getElementById('t4').style.display = perm.vendor ? 'block' : 'none';
-  document.getElementById('t5').style.display = perm.access ? 'block' : 'none';
+  document.getElementById('t4').style.display = perm.access ? 'block' : 'none';
 
   /* 생산 계산 */
   const designs = [];
@@ -295,10 +290,6 @@ function start(r){
     lm('', false);
   }
 
-  /* 거래처 */
-  if(perm.vendor) renderVendors();
-  else document.getElementById('vendorBody').innerHTML='';
-
   /* 접근로그 — 탭을 열 때 불러온다 */
   accessLoaded = false;
   document.getElementById('accessBody').innerHTML='';
@@ -316,12 +307,12 @@ function fill(id, items, ph){
 }
 
 function tab(p){
-  for(var i=1;i<=5;i++){
+  for(var i=1;i<=4;i++){
     var on = ('p'+i)===p;
     document.getElementById('p'+i).className = 'page' + (on?' on':'');
     document.getElementById('t'+i).className = on ? 'on' : '';
   }
-  if(p==='p5' && !accessLoaded) loadAccess();
+  if(p==='p4' && !accessLoaded) loadAccess();
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){
@@ -449,7 +440,7 @@ function section(title, cls, list){
       '<td><b>'+esc(m.name)+'</b><div class="sub2">'+esc(m.code)+'</div></td>'+
       '<td class="num">'+n(m.stock)+'</td>'+
       '<td class="ctr" style="font-size:12px">'+cell+'</td></tr>'+
-      '<tr id="'+id+'" style="display:none"><td colspan="3" class="vd">'+venCard(m.vcode)+'</td></tr>';
+      '<tr id="'+id+'" style="display:none"><td colspan="3" class="vd">'+venCard(m)+'</td></tr>';
   }).join('');
   return '<div class="sec '+cls+'">'+title+'</div><div class="tbl-wrap"><table>'+
     '<thead><tr><th style="text-align:left">부자재</th><th>수량</th><th>거래처</th></tr></thead>'+
@@ -462,7 +453,8 @@ function venToggle(id){
   el.style.display = (el.style.display === 'none') ? 'table-row' : 'none';
 }
 
-function venCard(vcode){
+function venCard(m){
+  const vcode = m.vcode;
   const v = (D.vendors || []).filter(function(x){ return x.vcode === vcode; })[0];
   if(!v) return '<span class="sub2">거래처마스터에 '+esc(vcode||'코드 없음')+' 정보가 없습니다.</span>';
   return '<div><b>거래처코드</b> '+esc(v.vcode)+'</div>'+
@@ -471,7 +463,10 @@ function venCard(vcode){
     '<div><b>연락처</b> '+(v.tel
       ? '<a href="tel:'+esc(v.tel.replace(/[^0-9+]/g,''))+'">'+esc(v.tel)+'</a>' : '—')+'</div>'+
     '<div><b>URL</b> '+(v.url
-      ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크 열기</a>' : '—')+'</div>';
+      ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크 열기</a>' : '—')+'</div>'+
+    '<div><b>MOQ</b> '+n(m.moq)+'</div>'+
+    '<div><b>단가</b> '+(num(m.price) ? n(m.price)+'원' : '—')+'</div>'+
+    '<div><b>리드타임</b> '+(num(m.lead) ? n(m.lead)+'일' : '—')+'</div>';
 }
 
 /* 신호등 열을 뺐으므로, 발주가 필요한 것만 따로 알린다 */
@@ -606,21 +601,6 @@ function lm(t, err){
   el.textContent = t; el.className = 'msg' + (err ? ' err' : '');
 }
 
-/* ── 거래처 ───────────────────────────── */
-function renderVendors(){
-  const rows = D.vendors.map(function(v){
-    return '<tr><td><b>'+esc(v.name)+'</b><div class="sub2">'+esc(v.memo)+'</div></td>'+
-      '<td style="font-size:12px">'+esc(v.person||'-')+'<div class="sub2">'+esc(v.tel||'')+'</div></td>'+
-      '<td style="font-size:11px;color:#1976D2;word-break:break-all">'+
-        (v.url ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크</a>' : '-')+'</td></tr>';
-  }).join('');
-  document.getElementById('vendorBody').innerHTML =
-    '<div class="tbl-wrap"><table><thead><tr>'+
-    '<th style="text-align:left">거래처</th><th>담당자</th><th>링크</th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>'+
-    '<div class="sub2">단가·MOQ는 시트의 [공급품목] 탭에서 관리합니다.</div>';
-}
-
 /* ── 접근로그 (관리자) ────────────────── */
 async function loadAccess(){
   const body = document.getElementById('accessBody');
@@ -662,7 +642,6 @@ async function reload(){
     if(!r.ok){ logout(); gm('다시 로그인해 주세요.'); return; }
     if(r.role !== ROLE){ start(r); return; }   // 권한이 바뀌었으면 화면을 다시 짠다
     D = r; renderProducts(); renderStock();
-    if((PERM[ROLE]||NOPERM).vendor) renderVendors();
     document.getElementById('updated').textContent = '갱신 ' + r.updated;
   }catch(e){}
 }
