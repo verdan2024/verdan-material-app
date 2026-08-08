@@ -51,7 +51,7 @@ details[open] summary::before{content:'▾ ';}
 details .tbl-wrap{margin-top:8px;}
 .lnk{color:#1976D2;font-weight:600;cursor:pointer;border-bottom:1px solid #BBDEFB;}
 .vd{background:#FAFAFC;font-size:12px;line-height:2.0;}
-.vd b{display:inline-block;min-width:70px;color:#999;font-weight:600;}
+.vd b{display:inline-block;min-width:96px;color:#999;font-weight:600;}
 .vd a{color:#1976D2;}
 .page.on{display:block;}
 
@@ -102,7 +102,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
            onkeydown="if(event.key==='Enter')login()">
     <button onclick="login()">확인</button>
     <div id="gateMsg"></div>
-    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.6 · 2026-08-08</div>
+    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.7 · 2026-08-08</div>
   </div>
 </div>
 
@@ -171,7 +171,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
-    <div class="sub2" style="margin-top:10px">버던_재고 · v3.6</div>
+    <div class="sub2" style="margin-top:10px">버던_재고 · v3.7</div>
   </div>
 </div>
 
@@ -457,16 +457,27 @@ function venCard(m){
   const vcode = m.vcode;
   const v = (D.vendors || []).filter(function(x){ return x.vcode === vcode; })[0];
   if(!v) return '<span class="sub2">거래처마스터에 '+esc(vcode||'코드 없음')+' 정보가 없습니다.</span>';
+
+  /* 담당자 · 연락처 → 홍길동 / 010-0000-0000 */
+  const who = [];
+  if(v.person) who.push(esc(v.person));
+  if(v.tel) who.push('<a href="tel:'+esc(v.tel.replace(/[^0-9+]/g,''))+'">'+esc(v.tel)+'</a>');
+
+  /* MOQ · 단가 → 1,000 / 8원 */
+  const buy = [];
+  if(num(m.moq))   buy.push(n(m.moq));
+  if(num(m.price)) buy.push(n(m.price)+'원');
+
   return '<div><b>거래처코드</b> '+esc(v.vcode)+'</div>'+
     '<div><b>거래처명</b> '+esc(v.name)+'</div>'+
-    '<div><b>담당자</b> '+esc(v.person || '—')+'</div>'+
-    '<div><b>연락처</b> '+(v.tel
-      ? '<a href="tel:'+esc(v.tel.replace(/[^0-9+]/g,''))+'">'+esc(v.tel)+'</a>' : '—')+'</div>'+
+    '<div><b>상세스펙</b> '+(m.spec ? esc(m.spec)
+      : '<span class="danger">미등록 — 공급품목 시트에 입력하세요</span>')+'</div>'+
+    '<div><b>담당자 · 연락처</b> '+(who.length ? who.join(' / ') : '—')+'</div>'+
     '<div><b>URL</b> '+(v.url
       ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크 열기</a>' : '—')+'</div>'+
-    '<div><b>MOQ</b> '+n(m.moq)+'</div>'+
-    '<div><b>단가</b> '+(num(m.price) ? n(m.price)+'원' : '—')+'</div>'+
-    '<div><b>리드타임</b> '+(num(m.lead) ? n(m.lead)+'일' : '—')+'</div>';
+    '<div><b>MOQ · 단가</b> '+(buy.length ? buy.join(' / ') : '—')+'</div>'+
+    '<div><b>리드타임</b> '+(num(m.lead) ? n(m.lead)+'일' : '—')+'</div>'+
+    '<div><b>발주 방법</b> '+(m.method ? esc(m.method) : '—')+'</div>';
 }
 
 /* 신호등 열을 뺐으므로, 발주가 필요한 것만 따로 알린다 */
