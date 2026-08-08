@@ -73,6 +73,8 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
 .sec{font-size:12px;font-weight:700;padding:7px 11px;border-radius:8px;margin:14px 0 8px;}
 .sec-prod{background:#E8EAF6;color:#1A237E;}
 .sec-out{background:#E8F5E9;color:#1B5E20;}
+.sec-fab{background:#EFEBE9;color:#4E342E;}
+.sec-etc{background:#F0F0F3;color:#666;}
 .danger{color:#C0392B;font-weight:700;}
 .warn{color:#7D5A00;font-weight:600;}
 .ok{color:#1B5E20;font-weight:600;}
@@ -100,7 +102,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
            onkeydown="if(event.key==='Enter')login()">
     <button onclick="login()">확인</button>
     <div id="gateMsg"></div>
-    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.4 · 2026-08-08</div>
+    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v3.5 · 2026-08-08</div>
   </div>
 </div>
 
@@ -173,7 +175,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
-    <div class="sub2" style="margin-top:10px">버던_재고 · v3.4</div>
+    <div class="sub2" style="margin-top:10px">버던_재고 · v3.5</div>
   </div>
 </div>
 
@@ -415,13 +417,25 @@ function renderProducts(){
 }
 
 /* ── 부자재 재고 ──────────────────────── */
+/* 분류 구획. 새 분류가 생겨도 아래 ORDER에 한 줄 더하면 됩니다. */
+const CATS = [
+  { k:'생산', t:'🔵 생산 부자재', c:'sec-prod' },
+  { k:'출고', t:'🟢 출고 부자재', c:'sec-out'  },
+  { k:'원단', t:'🟤 원단',        c:'sec-fab'  }
+];
+
 function renderStock(){
-  const prod = D.materials.filter(function(m){ return m.cat==='생산'; });
-  const out  = D.materials.filter(function(m){ return m.cat==='출고'; });
-  document.getElementById('stockBody').innerHTML =
-    section('🔵 생산 부자재','sec-prod',prod) +
-    section('🟢 출고 부자재','sec-out',out) +
-    발주알림() + note();
+  let h = '';
+  CATS.forEach(function(o){
+    h += section(o.t, o.c, D.materials.filter(function(m){ return m.cat === o.k; }));
+  });
+  /* 분류가 비었거나 목록에 없는 값이면 조용히 사라지지 않도록 따로 모은다 */
+  const rest = D.materials.filter(function(m){
+    return !CATS.some(function(o){ return o.k === m.cat; });
+  });
+  if(rest.length) h += section('⚪ 분류 미지정','sec-etc',rest);
+
+  document.getElementById('stockBody').innerHTML = h + 발주알림() + note();
 }
 
 function section(title, cls, list){
