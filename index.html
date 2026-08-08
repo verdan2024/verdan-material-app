@@ -2,7 +2,9 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<!-- maximum-scale 은 넣지 않는다. 독립 앱 모드에서 입력 칸 포커스를 막는다.
+     입력 칸 글자가 16px 이라 이것 없이도 화면이 멋대로 확대되지 않는다. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>버던_재고</title>
 
 <!-- ── 홈화면 앱 설정 ─────────────────────────────
@@ -30,8 +32,12 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',Arial,sans-serif;backgrou
      box-shadow:0 2px 12px rgba(0,0,0,.06);text-align:center;}
 #gate .logo{font-size:34px;margin-bottom:10px;}
 #gate h1{font-size:17px;color:#1A1A2E;margin-bottom:20px;}
+/* -webkit-user-select:text 가 없으면 독립 앱 모드에서 칸이 '선택만 되고
+   편집은 안 되는' 상태로 빠져 키보드가 올라오지 않는다.
+   touch-action:manipulation 은 탭을 확대 제스처로 오인하지 않게 한다. */
 #gate input{width:100%;padding:13px 16px;border:1px solid #E0E0E0;border-radius:10px;
-     font-size:16px;margin-bottom:10px;font-family:inherit;background:#F8F8F8;}
+     font-size:16px;margin-bottom:10px;font-family:inherit;background:#F8F8F8;
+     -webkit-user-select:text;user-select:text;touch-action:manipulation;}
 #gate input:focus{outline:none;border-color:#9FA8DA;background:#fff;}
 #gate button{width:100%;padding:13px;border:none;border-radius:10px;background:#1A1A2E;color:#fff;
      font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;}
@@ -77,7 +83,10 @@ details .tbl-wrap{margin-top:8px;}
 .card{background:#fff;border:1px solid #E8E8E8;border-radius:12px;padding:14px;margin-bottom:12px;}
 .card h3{font-size:13px;color:#1A1A2E;margin-bottom:10px;}
 select,input.f,button.f{width:100%;padding:12px;border:1px solid #E0E0E0;border-radius:10px;
-     font-size:16px;margin-bottom:9px;font-family:inherit;background:#fff;}
+     font-size:16px;margin-bottom:9px;font-family:inherit;background:#fff;
+     touch-action:manipulation;}
+/* 입출고 등록 칸도 로그인 칸과 같은 이유로 편집 가능 상태를 명시한다 */
+input.f{-webkit-user-select:text;user-select:text;}
 button.f{background:#1A1A2E;color:#fff;border:none;font-weight:700;cursor:pointer;}
 button.ghost{background:#fff;color:#1A1A2E;border:1px solid #DDD;}
 button:disabled{opacity:.55;}
@@ -109,6 +118,15 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
 /* 홈 인디케이터(하단 막대)에 버튼이 가리지 않도록 여백 확보 */
 .foot{font-size:11px;color:#AAA;text-align:center;
      padding:14px 0 calc(14px + env(safe-area-inset-bottom));}
+
+/* 워터마크 — 캡쳐를 막을 수는 없으므로, 캡쳐된 이미지에
+   누가 언제 열었는지가 함께 찍히도록 한다.
+   pointer-events:none 이라 아래 표의 탭·스크롤을 방해하지 않는다. */
+#wm{position:fixed;inset:0;pointer-events:none;z-index:9999;
+    overflow:hidden;display:none;}
+#wm span{position:absolute;white-space:nowrap;
+    font-size:13px;font-weight:700;color:#1A1A2E;
+    opacity:var(--wm-op,.08);transform:rotate(-30deg);}
 </style>
 </head>
 <body>
@@ -124,7 +142,7 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
            onkeydown="if(event.key==='Enter')login()">
     <button id="loginBtn" onclick="login()">확인</button>
     <div id="gateMsg"></div>
-    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v4.0 · 2026-08-08</div>
+    <div class="hint">본인 이름을 입력하세요. 입출고 기록에 함께 남습니다.<br>v4.2 · 2026-08-08</div>
   </div>
 </div>
 
@@ -193,9 +211,12 @@ td{padding:8px 6px;border-bottom:1px solid #F0F0F0;}
   <div class="foot">
     <button class="f ghost" style="width:auto;padding:9px 22px;font-size:12px"
             onclick="logout()">로그아웃</button>
-    <div class="sub2" style="margin-top:10px">버던_재고 · v4.0</div>
+    <div class="sub2" style="margin-top:10px">버던_재고 · v4.2</div>
   </div>
 </div>
+
+<!-- 워터마크 레이어 (로그인 후에만 표시) -->
+<div id="wm" aria-hidden="true"></div>
 
 <script>
 /* ⚠️ Apps Script 웹앱 URL (기존 것 그대로 두시면 됩니다) */
@@ -209,6 +230,11 @@ const NM_STORE = 'verdan_user';
 const TIMEOUT_MS = 12000;
 /* 앱으로 돌아올 때마다 서버를 두드리면 요청이 겹친다. 최소 간격을 둔다. */
 const RECHECK_MS = 30000;
+
+/* 워터마크 진하기. 0 ~ 1.
+   진할수록 유출 억제력은 커지지만 재고 숫자가 읽기 어려워진다.
+   표가 잘 안 보이면 이 값만 0.08 정도로 낮추면 된다. */
+const WM_OPACITY = 0.40;
 
 /* 권한표 — 서버의 ROLES와 짝을 맞춘다 */
 const PERM = {
@@ -255,6 +281,35 @@ function stamp(text, stale){
   el.className = 'sub' + (stale ? ' stale' : '');
 }
 
+/* ── 워터마크 ─────────────────────────── */
+/* 화면을 덮는 격자 형태로 '이름 · 접속시각'을 반복해 깔아둔다.
+   화면 크기가 바뀌면 다시 그린다. */
+function watermark(on){
+  const el = document.getElementById('wm');
+  if(!on || !USER){ el.style.display='none'; el.innerHTML=''; return; }
+  const d = new Date();
+  const p2 = function(x){ return String(x).padStart(2,'0'); };
+  const txt = USER + ' · ' + d.getFullYear() + '-' + p2(d.getMonth()+1) + '-' + p2(d.getDate()) +
+              ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes());
+  const W = window.innerWidth, H = window.innerHeight;
+  let h = '';
+  for(let y = -120; y < H + 200; y += 130){
+    for(let x = -180; x < W + 240; x += 210){
+      h += '<span style="left:' + x + 'px;top:' + y + 'px">' + esc(txt) + '</span>';
+    }
+  }
+  el.style.setProperty('--wm-op', WM_OPACITY);
+  el.innerHTML = h;
+  el.style.display = 'block';
+}
+
+let wmTimer = null;
+window.addEventListener('resize', function(){
+  if(!PW) return;
+  clearTimeout(wmTimer);
+  wmTimer = setTimeout(function(){ watermark(true); }, 200);
+});
+
 /* ── 로그인 ───────────────────────────── */
 async function login(){
   if(BUSY) return;
@@ -292,6 +347,7 @@ function logout(){
   }catch(e){}                                          // 이름은 남겨 재입력을 줄인다
   PW=''; USER=''; ROLE=''; D=null; accessLoaded=false; LAST_CHECK=0;
   busy(false);
+  watermark(false);
   document.getElementById('app').style.display='none';
   document.getElementById('gate').style.display='flex';
   document.getElementById('pw').value='';
@@ -326,6 +382,7 @@ function start(r){
   document.getElementById('app').style.display='flex';
   document.getElementById('roleBadge').textContent = perm.label;
   stamp('갱신 ' + r.updated, false);
+  watermark(true);
 
   /* 탭 노출 — 권한마다 매번 명시적으로 켜고 끈다 */
   document.getElementById('t3').style.display = perm.log    ? 'block' : 'none';
