@@ -126,10 +126,12 @@ html{height:100%;overflow:hidden;background:#30382A;}
 html.ready{background:var(--v-card);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
-  position:fixed;top:0;left:0;width:100%;overflow:hidden;
-  /* 높이는 코어 JS 가 "실제 보이는 영역"에 맞춰 넣습니다(applyViewportHeight).
-     100% · 100dvh 둘 다 iOS 독립 앱에서 아래쪽이 비거나 키보드에 밀립니다. */
-  height:100vh;
+  /* ⚠️ 높이를 계산해서 넣지 않습니다.
+     innerHeight · visualViewport.height 는 기기·상황에 따라 홈 인디케이터
+     몫이 빠질 때가 있어 화면 맨 아래에 띠가 남습니다.
+     네 변을 0 으로 붙이면 그런 계산 자체가 없어집니다.
+     키보드가 올라올 때만 JS 가 높이를 잠깐 대신 잡습니다. */
+  position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden;
   display:flex;flex-direction:column;overscroll-behavior:none;touch-action:manipulation;
   -webkit-text-size-adjust:100%;
   transition:background-color .25s var(--ease),color .25s var(--ease);}
@@ -342,8 +344,10 @@ details[open] summary .chev{transform:rotate(90deg);}
 details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);margin:0;}
 
 /* ── 하단 내비 ────────────────────────────────────── */
+/* 무신사 실측 — 내용 52px + 홈 인디케이터 영역.
+   안전영역이 0 인 기기(구형·안드로이드)에서도 최소 8px 은 남깁니다. */
 #bottom{flex-shrink:0;display:flex;background:var(--v-card);border-top:1px solid var(--v-line);
-  padding-bottom:env(safe-area-inset-bottom);z-index:40;}
+  padding-bottom:max(env(safe-area-inset-bottom), 8px);z-index:40;}
 #bottom button{flex:1;border:none;background:none;font-family:inherit;padding:8px 0 7px;
   display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--v-ph);}
 #bottom button.on{color:var(--v-strong);}
@@ -668,13 +672,19 @@ function keyboardOpen(){
 }
 function applyViewportHeight(){
   const vv = window.visualViewport;
-  /* 키보드가 없을 때는 innerHeight(화면 전체)를 씁니다.
-     visualViewport.height 는 홈 인디케이터 몫을 빼고 잡힐 때가 있어
-     화면 맨 아래에 밝은 띠가 남습니다. */
-  const h = keyboardOpen() ? vv.height : window.innerHeight;
-  document.body.style.height = h + 'px';
-  document.body.style.transform =
-    (keyboardOpen() && vv.offsetTop) ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
+  const b  = document.body.style;
+  if(keyboardOpen()){
+    /* 키보드가 올라온 동안에만 높이를 직접 잡습니다.
+       ①만큼 줄이고 ②(offsetTop)만큼 도로 내려 제자리에 붙입니다. */
+    b.bottom = 'auto';
+    b.height = vv.height + 'px';
+    b.transform = vv.offsetTop ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
+  }else{
+    /* 평소에는 CSS 의 inset:0 에 맡깁니다. 계산하지 않는 것이 가장 정확합니다. */
+    b.bottom = '';
+    b.height = '';
+    b.transform = 'none';
+  }
 }
 let vpT = null;
 function applyViewportSoon(){ clearTimeout(vpT); vpT = setTimeout(applyViewportHeight, 60); }
