@@ -21,7 +21,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.0   (버던_재고 API v3.6)
+   버던_재고 v6.1   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -120,14 +120,11 @@
    오르내리며 화면 높이가 계속 바뀌어 헤더·탭이 흔들립니다. */
 /* 스플래시가 걷히기 전까지는 문서 바탕도 올리브로 둡니다.
    안 그러면 화면 맨 아래(홈 인디케이터 쪽)에 밝은 띠가 남습니다. */
-/* 문서 바탕 — 스플래시 동안은 올리브, 그 뒤엔 하단 내비와 같은 색.
-   화면 맨 아래에 몇 px 이 남더라도 눈에 띄지 않습니다. */
+/* 문서 바탕(canvas) — 화면 맨 아래에 앱 바깥 영역이 남는 기기가 있습니다.
+   그 자리는 body 가 아무리 늘어나도 닿지 않고 이 색이 보입니다.
+   색은 JS(paintCanvas)가 화면에 맞춰 직접 넣습니다.
+   CSS 클래스를 겹쳐 쓰면 규칙 하나만 어긋나도 조용히 무시됩니다. */
 html{height:100%;overflow:hidden;background:#30382A;}
-html.ready{background:var(--v-bg);}
-/* 본 화면에서는 바탕을 하단 내비와 같은 색으로 둡니다.
-   기기에 따라 화면 맨 아래(홈 인디케이터 자리)가 앱 바깥으로 남는데,
-   그 자리를 내비와 같은 색으로 칠하면 내비가 끝까지 이어져 보입니다. */
-html.ready.inapp{background:var(--v-card);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
   /* ⚠️ 높이를 계산해서 넣지 않습니다.
@@ -523,7 +520,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.0
+   버던_재고 v6.1
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -531,7 +528,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.0';
+const APP_VER  = 'v6.1';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -579,6 +576,9 @@ const CATS = [
 let PW='', USER='', ROLE='', DATA=null, FEAT=null;
 let PAGE='p1', LASTMAIN='p1', NAV='home', LOGVIEW='access';
 let LOGS=[], logsLoaded=false, BUSY=false, LAST=0;
+/* ⚠️ 스플래시가 떠 있는지. canvas() 가 참조하므로 반드시 위에서 선언합니다.
+   const·let 은 끌어올려지지 않아, 아래에 두면 파일이 로드 즉시 죽습니다. */
+let SPLASH_ON = true;
 const IDEM = {};   /* 멱등키 — 같은 작업을 다시 눌러도 서버가 중복을 걸러낸다 */
 
 /* ── 작은 도구 ────────────────────────────────────── */
@@ -624,6 +624,7 @@ applyTheme(THEME);
 function applyTheme(v){
   THEME = v;
   document.documentElement.dataset.theme = v;
+  if(typeof canvas === 'function') canvas();
   /* 스플래시와 헤더는 언제나 어두운 배경이라 밝은 로고를 씁니다.
      로그인 화면만 배경이 테마를 따라가므로 로고도 함께 바꿉니다. */
   const gl = $('gateLogo');
@@ -714,12 +715,19 @@ document.addEventListener('focusout', function(){ setTimeout(applyViewportHeight
 applyViewportHeight();
 
 /* ── 스플래시 → 로그인 또는 자동 로그인 ───────────── */
-function ready(){ document.documentElement.classList.add('ready'); canvas(); }
+function ready(){ SPLASH_ON = false; canvas(); }
 
-/* 지금 보고 있는 화면에 맞춰 문서 바탕색을 바꿉니다.
-   본 화면 = 하단 내비 색 / 로그인 화면 = 앱 배경색 */
+/* 지금 보고 있는 화면에 맞춰 문서 바탕색을 직접 칠합니다.
+     스플래시 = 올리브 (아래까지 전부 초록)
+     본 화면  = 하단 내비와 같은 색 (내비가 끝까지 이어져 보이도록)
+     로그인   = 앱 배경색
+   인라인 스타일이라 어떤 CSS 규칙보다 확실하게 적용됩니다. */
 function canvas(){
-  document.documentElement.classList.toggle('inapp', $('app').classList.contains('on'));
+  const el = document.documentElement;
+  if(SPLASH_ON){ el.style.background = '#30382A'; return; }
+  el.style.background = $('app').classList.contains('on')
+    ? 'var(--v-card)'   /* 하단 내비와 같은 색 */
+    : 'var(--v-bg)';    /* 로그인 화면 */
 }
 
 setTimeout(function(){
