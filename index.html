@@ -21,7 +21,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.1   (버던_재고 API v3.6)
+   버던_재고 v6.2   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -351,8 +351,11 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* ── 하단 내비 ────────────────────────────────────── */
 /* 무신사 실측 — 내용 52px + 홈 인디케이터 영역.
    안전영역이 0 인 기기(구형·안드로이드)에서도 최소 8px 은 남깁니다. */
+/* 아래 여백은 JS(fitBottom)가 기기에 맞춰 넣습니다.
+   앱 바깥으로 남는 자리가 이미 홈 인디케이터를 덮는 기기가 있어,
+   env() 를 그대로 쓰면 같은 여백이 두 번 들어갑니다. */
 #bottom{flex-shrink:0;display:flex;background:var(--v-card);border-top:1px solid var(--v-line);
-  padding-bottom:max(env(safe-area-inset-bottom), 8px);z-index:40;}
+  padding-bottom:var(--navpad, 8px);z-index:40;}
 #bottom button{flex:1;border:none;background:none;font-family:inherit;padding:8px 0 7px;
   display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--v-ph);}
 #bottom button.on{color:var(--v-strong);}
@@ -520,7 +523,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.1
+   버던_재고 v6.2
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -528,7 +531,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.1';
+const APP_VER  = 'v6.2';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -722,12 +725,17 @@ function ready(){ SPLASH_ON = false; canvas(); }
      본 화면  = 하단 내비와 같은 색 (내비가 끝까지 이어져 보이도록)
      로그인   = 앱 배경색
    인라인 스타일이라 어떤 CSS 규칙보다 확실하게 적용됩니다. */
+function tok(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
 function canvas(){
   const el = document.documentElement;
   if(SPLASH_ON){ el.style.background = '#30382A'; return; }
+  /* ⚠️ 'var(--v-card)' 를 인라인으로 넣으면 기기에 따라 무시됩니다.
+     계산된 색값(#FFFFFF 같은)을 직접 넣어야 확실합니다. */
   el.style.background = $('app').classList.contains('on')
-    ? 'var(--v-card)'   /* 하단 내비와 같은 색 */
-    : 'var(--v-bg)';    /* 로그인 화면 */
+    ? (tok('--v-card') || '#FFFFFF')   /* 하단 내비와 같은 색 */
+    : (tok('--v-bg')   || '#F7F6F1');  /* 로그인 화면 */
 }
 
 setTimeout(function(){
@@ -885,6 +893,25 @@ document.addEventListener('visibilitychange', function(){
 let lastY=0, ticking=false;
 function measure(){
   document.documentElement.style.setProperty('--hh', $('header').offsetHeight+'px');
+  fitBottom();
+}
+
+/* 화면 아래에 앱 바깥으로 남는 자리(gap)를 재고,
+   그만큼 하단 내비 안쪽 여백을 덜어냅니다.
+   바깥 자리는 canvas() 가 내비와 같은 색으로 칠하므로 이어져 보입니다. */
+function fitBottom(){
+  let safe = 0;
+  try{
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;visibility:hidden;'+
+      'pointer-events:none;height:env(safe-area-inset-bottom)';
+    document.body.appendChild(probe);
+    safe = probe.offsetHeight;
+    probe.remove();
+  }catch(e){}
+  const scr = (window.screen && window.screen.height) ? window.screen.height : window.innerHeight;
+  const gap = Math.max(0, scr - window.innerHeight);
+  document.documentElement.style.setProperty('--navpad', Math.max(8, safe - gap) + 'px');
 }
 window.addEventListener('resize', function(){ measure(); if(PW) watermark(); });
 function onScroll(e){
