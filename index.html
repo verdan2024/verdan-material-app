@@ -124,6 +124,10 @@
    화면 맨 아래에 몇 px 이 남더라도 눈에 띄지 않습니다. */
 html{height:100%;overflow:hidden;background:#30382A;}
 html.ready{background:var(--v-bg);}
+/* 본 화면에서는 바탕을 하단 내비와 같은 색으로 둡니다.
+   기기에 따라 화면 맨 아래(홈 인디케이터 자리)가 앱 바깥으로 남는데,
+   그 자리를 내비와 같은 색으로 칠하면 내비가 끝까지 이어져 보입니다. */
+html.ready.inapp{background:var(--v-card);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
   /* ⚠️ 높이를 계산해서 넣지 않습니다.
@@ -378,8 +382,12 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 .log-r .t{font-size:11px;color:var(--v-ph);font-variant-numeric:tabular-nums;margin-left:auto;
   white-space:nowrap;}
 .log-r .l2{font-size:11.5px;color:var(--v-mute);margin-top:3px;word-break:break-all;}
-.note{font-size:12px;color:var(--v-mute);text-align:center;padding:22px 14px;line-height:1.7;}
-.note.err{color:var(--v-danger);}
+/* ⚠️ 이름을 .empty 로 바꿨습니다.
+   예전 이름(.note)은 주의 상자(.box.note)와 겹쳐서,
+   상자에 가운데 정렬과 큰 여백이 몰래 덧붙었습니다.
+   그래서 [발주 검토]와 [재고 미확인]의 간격이 달라 보였습니다. */
+.empty{font-size:12px;color:var(--v-mute);text-align:center;padding:22px 14px;line-height:1.7;}
+.empty.err{color:var(--v-danger);}
 
 /* ── 워터마크 ─────────────────────────────────────
    캡쳐를 막을 수는 없으므로, 캡쳐된 이미지에 누가 언제 열었는지가
@@ -706,7 +714,13 @@ document.addEventListener('focusout', function(){ setTimeout(applyViewportHeight
 applyViewportHeight();
 
 /* ── 스플래시 → 로그인 또는 자동 로그인 ───────────── */
-function ready(){ document.documentElement.classList.add('ready'); }
+function ready(){ document.documentElement.classList.add('ready'); canvas(); }
+
+/* 지금 보고 있는 화면에 맞춰 문서 바탕색을 바꿉니다.
+   본 화면 = 하단 내비 색 / 로그인 화면 = 앱 배경색 */
+function canvas(){
+  document.documentElement.classList.toggle('inapp', $('app').classList.contains('on'));
+}
 
 setTimeout(function(){
   $('splash').classList.add('gone');
@@ -732,6 +746,7 @@ async function autoLogin(){
 function showGate(){
   $('gate').classList.add('on');
   $('app').classList.remove('on');
+  canvas();
   /* ready() 는 부르지 않습니다. 스플래시가 걷힐 때만 바탕색을 바꿉니다.
      여기서 부르면 스플래시가 아직 떠 있는 동안 아래쪽이 밝아집니다. */
 }
@@ -767,6 +782,7 @@ async function login(){
 function enter(r){
   $('gate').classList.remove('on');
   $('app').classList.add('on');
+  canvas();
   gmsg('');
   setData(r);
   boot();
@@ -782,6 +798,7 @@ function logout(){
   $('wm').style.display='none';
   $('app').classList.remove('on');
   $('gate').classList.add('on');
+  canvas();
   NAV='home'; LASTMAIN='p1'; go('p1'); paintBottom();
 }
 
@@ -1064,7 +1081,7 @@ function renderProducts(){
   const 협찬  = items.filter(function(x){ return String(x.kind).indexOf('협찬')>=0  && x.tot>0; });
 
   if(!정상.length){
-    setHTML('prodBody','<div class="note">제품 데이터가 없습니다.</div>');
+    setHTML('prodBody','<div class="empty">제품 데이터가 없습니다.</div>');
     return;
   }
 
@@ -1330,18 +1347,18 @@ function lm(t, err){
 async function loadLogs(force){
   if(!can('access')) return;
   if(logsLoaded && !force){ renderLogs(); return; }
-  setHTML('logBody','<div class="note">불러오는 중...</div>');
+  setHTML('logBody','<div class="empty">불러오는 중...</div>');
   try{
     const r = await api({ action:'access' });
     if(!r || !r.ok){
-      setHTML('logBody','<div class="note err">'+esc((r&&r.msg)||'불러오지 못했습니다.')+'</div>');
+      setHTML('logBody','<div class="empty err">'+esc((r&&r.msg)||'불러오지 못했습니다.')+'</div>');
       return;
     }
     LOGS = (r.logs||[]).filter(function(x){ return x.kind!=='system'; });
     logsLoaded = true;
     renderLogs();
   }catch(e){
-    setHTML('logBody','<div class="note err">'+esc(failMsg(e,''))+'</div>');
+    setHTML('logBody','<div class="empty err">'+esc(failMsg(e,''))+'</div>');
   }
 }
 
@@ -1349,7 +1366,7 @@ function renderLogs(){
   if(!can('access')) return;
   const rows = LOGS.filter(function(x){ return x.kind===LOGVIEW; });
   if(!rows.length){
-    setHTML('logBody','<div class="note">'+
+    setHTML('logBody','<div class="empty">'+
       (LOGVIEW==='access' ? '접속 기록이 없습니다.' : '기록이 없습니다.')+'</div>');
     return;
   }
