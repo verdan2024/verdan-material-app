@@ -21,7 +21,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════
-   재고관리 v6.7   (버던_재고 API v3.6)
+   재고관리 v6.8   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -350,6 +350,10 @@ details summary .cnt{margin-left:auto;font-size:11.5px;color:var(--v-mute);font-
 details summary .chev{transition:transform .2s var(--ease);color:var(--v-mute);display:flex;}
 details[open] summary .chev{transform:rotate(90deg);}
 details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);margin:0;}
+/* 펼쳤을 때 안쪽에 디자인별로 나뉘어 들어가는 경우 */
+details .inner{padding:2px 13px 4px;border-top:1px solid var(--v-line);}
+details .inner .sec{margin:14px 0 8px;}
+details .inner .tbl{border:1px solid var(--v-line);border-radius:11px;margin-bottom:12px;}
 
 /* ── 하단 내비 ────────────────────────────────────── */
 /* 무신사 실측 — 내용 52px + 홈 인디케이터 영역.
@@ -553,7 +557,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <script>
 /* ══════════════════════════════════════════════════════
-   재고관리 v6.7
+   재고관리 v6.8
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -561,7 +565,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.7';
+const APP_VER  = 'v6.8';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -1202,10 +1206,14 @@ function renderProducts(){
     if(!g){ g={name:d,rows:[]}; groups.push(g); }
     g.rows.push(x);
   });
-  /* 디자인별로 접을 수 있게 합니다. 정상품은 펼친 상태로 시작합니다. */
-  groups.forEach(function(g){
-    h += 접기(g.name, n(합(g.rows))+'개', 제품표(g.rows,false), true);
-  });
+
+  /* 정상 제품 · 리퍼브 · 협찬을 같은 모양으로 둡니다.
+     펼치면 디자인별로 나뉘어 보입니다. */
+  h += 접기('정상 제품', n(합(정상))+'개',
+    '<div class="inner">'+groups.map(function(g){
+      return '<div class="sec">'+esc(g.name)+
+        '<span class="cnt">'+n(합(g.rows))+'개</span></div>'+제품표(g.rows,false);
+    }).join('')+'</div>', false);
 
   /* 품절 알림 — 정상품 아래, 리퍼브 위 */
   const 품절 = 정상.filter(function(x){ return x.tot<=0; });
@@ -1220,9 +1228,6 @@ function renderProducts(){
   if(리퍼브.length) h += 접기('리퍼브 제품', n(합(리퍼브))+'개', 제품표(리퍼브,true), false);
   if(협찬.length)   h += 접기('협찬 제품',   n(합(협찬))+'개',   제품표(협찬,true), false);
 
-  h += '<div class="foot-note">· 재고관리_메인 시트를 그대로 읽습니다. 앱에서는 수정할 수 없습니다.<br>'+
-       '· 창고는 자사 보관, 3PL은 위탁 보관 수량입니다.<br>'+
-       '· 리퍼브·협찬은 재고가 있는 것만 표시합니다.</div>';
   setHTML('prodBody', h);
 }
 
