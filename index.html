@@ -120,8 +120,10 @@
    오르내리며 화면 높이가 계속 바뀌어 헤더·탭이 흔들립니다. */
 /* 스플래시가 걷히기 전까지는 문서 바탕도 올리브로 둡니다.
    안 그러면 화면 맨 아래(홈 인디케이터 쪽)에 밝은 띠가 남습니다. */
+/* 문서 바탕 — 스플래시 동안은 올리브, 그 뒤엔 하단 내비와 같은 색.
+   화면 맨 아래에 몇 px 이 남더라도 눈에 띄지 않습니다. */
 html{height:100%;overflow:hidden;background:#30382A;}
-html.ready{background:var(--v-bg);}
+html.ready{background:var(--v-card);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
   position:fixed;top:0;left:0;width:100%;overflow:hidden;
@@ -169,11 +171,17 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
    헤더만 위로 미끄러져 잘리므로, 접혀도 탭이 상태바에 파고들지 않습니다. */
 /* 무신사 실측 — 안전영역 아래 16px 에 탭 글자, 바 하단 107px.
    안전영역(59) + 6px + 탭 위 여백(12px) = 77px, 바 하단 105px 로 맞춥니다. */
-#chrome{flex-shrink:0;z-index:30;background:var(--v-header);overflow:hidden;
+#chrome{flex-shrink:0;z-index:30;background:var(--v-header);
   padding-top:calc(env(safe-area-inset-top) + 6px);}
-#header{padding:6px 18px 12px;transition:margin-top .2s var(--ease);
-  display:flex;align-items:flex-start;gap:12px;color:var(--v-onink);}
-#chrome.up #header{margin-top:calc(-1 * var(--hh));}
+/* ⚠️ overflow:hidden 은 패딩 상자 기준으로 자릅니다.
+   안전영역 패딩을 #chrome 이 갖고 자르기는 이 안쪽 상자가 맡아야
+   헤더가 상태바(시계·배터리) 영역으로 올라오지 않습니다. */
+#headWrap{overflow:hidden;}
+#header{padding:6px 18px 12px;display:flex;align-items:flex-start;gap:12px;
+  color:var(--v-onink);
+  transition:margin-top .26s var(--ease), opacity .16s linear;}
+/* 미끄러져 올라가면서 함께 흐려집니다. 그냥 밀려 올라가면 뚝 끊겨 보입니다. */
+#chrome.up #header{margin-top:calc(-1 * var(--hh));opacity:0;}
 #brandBtn{display:flex;align-items:center;gap:7px;background:none;border:none;
   color:var(--v-onink);font-family:inherit;padding:0;}
 #brandBtn .logo{width:88px;height:auto;display:block;}
@@ -395,6 +403,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <div id="app">
   <div id="chrome">
+    <div id="headWrap">
     <div id="header">
       <div>
         <button id="brandBtn"><img class="logo" id="headLogo" alt="VERDAN"><span class="chev"></span></button>
@@ -404,6 +413,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
         <button id="rfBtn">새로고침</button>
         <div id="stampRow"><span id="rfIcon"></span><span id="stamp">—</span></div>
       </div>
+    </div>
     </div>
     <div id="tabs">
       <button data-page="p1" class="on">재고</button>
@@ -658,7 +668,10 @@ function keyboardOpen(){
 }
 function applyViewportHeight(){
   const vv = window.visualViewport;
-  const h  = vv ? vv.height : window.innerHeight;
+  /* 키보드가 없을 때는 innerHeight(화면 전체)를 씁니다.
+     visualViewport.height 는 홈 인디케이터 몫을 빼고 잡힐 때가 있어
+     화면 맨 아래에 밝은 띠가 남습니다. */
+  const h = keyboardOpen() ? vv.height : window.innerHeight;
   document.body.style.height = h + 'px';
   document.body.style.transform =
     (keyboardOpen() && vv.offsetTop) ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
@@ -705,7 +718,8 @@ async function autoLogin(){
 function showGate(){
   $('gate').classList.add('on');
   $('app').classList.remove('on');
-  ready();
+  /* ready() 는 부르지 않습니다. 스플래시가 걷힐 때만 바탕색을 바꿉니다.
+     여기서 부르면 스플래시가 아직 떠 있는 동안 아래쪽이 밝아집니다. */
 }
 function gmsg(t, wait){
   const el=$('gateMsg'); el.textContent=t; el.className = wait?'wait':'';
