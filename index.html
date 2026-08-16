@@ -21,7 +21,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.4   (버던_재고 API v3.6)
+   버던_재고 v6.5   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -375,6 +375,10 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
   background:var(--v-ok-bg);color:var(--v-ok);border:1px solid var(--v-ok-line);}
 .mp-blk{border-top:1px solid var(--v-line);padding:18px 2px 4px;}
 .mp-blk .ttl{font-size:11.5px;font-weight:700;color:var(--v-mute);margin-bottom:11px;}
+/* 라벨과 컨트롤을 한 줄에 두는 블록 (테마 전환) */
+.mp-blk.mp-row{display:flex;align-items:center;gap:12px;padding:14px 2px;}
+.mp-blk.mp-row .ttl{margin-bottom:0;}
+.mp-blk.mp-row .seg-pick{margin-left:auto;width:200px;flex-shrink:0;}
 .ver{text-align:center;font-size:11px;color:var(--v-ph);padding:26px 0 16px;line-height:1.7;}
 #outBtn{margin-bottom:4px;}
 
@@ -484,14 +488,13 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
       <div class="av"></div>
       <div>
         <div class="who" id="mpName">—</div>
-        <div class="sub">버던_재고</div>
       </div>
       <div class="rt"><span class="role" id="mpRole">—</span></div>
     </div>
 
-    <div class="mp-blk">
+    <div class="mp-blk mp-row">
       <div class="ttl">테마</div>
-      <div class="seg-pick" id="segTheme" style="max-width:220px">
+      <div class="seg-pick" id="segTheme">
         <button class="on" data-v="light">라이트</button>
         <button data-v="dark">다크</button>
       </div>
@@ -526,7 +529,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.4
+   버던_재고 v6.5
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -534,7 +537,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.4';
+const APP_VER  = 'v6.5';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -692,17 +695,18 @@ function keyboardOpen(){
 /* iOS 는 화면 높이를 상황에 따라 다르게 알려줍니다.
    손가락으로 당기면 커졌다가 놓으면 다시 줄어들어, 그대로 따라가면
    하단 내비가 왔다갔다 합니다.
-   그래서 "지금까지 본 가장 큰 값"을 기억해 거기에 못박습니다.
-   독립 앱(홈화면 아이콘)에서는 기기 화면 높이도 후보에 넣습니다. */
-let MAXH = 0;
+   ⚠️ 그렇다고 가장 큰 값(기기 화면 높이)으로 잡으면 실제로 보이는 영역을
+      넘어가 하단 내비가 화면 밖으로 밀려 사라집니다.
+   그래서 처음 잰 값에 못박고, 화면을 돌릴 때만 다시 잽니다.
+   화면 아래에 남는 자리는 canvas() 가 내비와 같은 색으로 칠합니다. */
+let PINH = 0, PINW = 0;
 function fullHeight(){
-  const vv = window.visualViewport;
-  let h = Math.max(window.innerHeight || 0, vv ? vv.height : 0, MAXH);
-  if(window.navigator.standalone && window.screen && window.screen.height){
-    h = Math.max(h, window.screen.height);
+  const w = window.innerWidth || 0;
+  if(!PINH || w !== PINW){
+    PINH = window.innerHeight || (window.visualViewport ? window.visualViewport.height : 0);
+    PINW = w;
   }
-  MAXH = h;
-  return h;
+  return PINH;
 }
 function applyViewportHeight(){
   const vv = window.visualViewport;
