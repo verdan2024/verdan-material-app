@@ -21,7 +21,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.2   (버던_재고 API v3.6)
+   버던_재고 v6.3   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -126,7 +126,10 @@
    CSS 클래스를 겹쳐 쓰면 규칙 하나만 어긋나도 조용히 무시됩니다. */
 html{height:100%;overflow:hidden;background:#30382A;}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
-  background:var(--v-bg);color:var(--v-txt);
+  /* ⚠️ 여기에 앱 배경색을 두면 안 됩니다.
+     iOS 독립 앱은 화면 아래 '앱 바깥' 자리를 body 배경색으로 칠합니다.
+     그 색은 JS(canvas)가 화면에 맞춰 넣고, 앱 배경은 #app·#gate 가 갖습니다. */
+  background:#30382A;color:var(--v-txt);
   /* ⚠️ 높이를 계산해서 넣지 않습니다.
      innerHeight · visualViewport.height 는 기기·상황에 따라 홈 인디케이터
      몫이 빠질 때가 있어 화면 맨 아래에 띠가 남습니다.
@@ -145,7 +148,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
 #splash .logo{width:200px;height:auto;display:block;}
 
 /* ── 로그인 ─────────────────────────────────────── */
-#gate{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:none;display:none;
+#gate{background:var(--v-bg);flex:1;min-height:0;overflow-y:auto;overscroll-behavior:none;display:none;
   flex-direction:column;justify-content:center;
   padding:calc(24px + env(safe-area-inset-top)) 26px calc(24px + env(safe-area-inset-bottom));}
 #gate.on{display:flex;}
@@ -165,7 +168,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
 #gate .hint{font-size:11px;color:var(--v-mute);margin-top:12px;line-height:1.7;text-align:center;}
 
 /* ── 앱 뼈대 ────────────────────────────────────── */
-#app{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+#app{background:var(--v-bg);display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
 #app.on{display:flex;}
 
 /* 헤더 + 탭을 한 덩어리로 묶습니다.
@@ -523,7 +526,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.2
+   버던_재고 v6.3
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -531,7 +534,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.2';
+const APP_VER  = 'v6.3';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -729,13 +732,16 @@ function tok(name){
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 function canvas(){
-  const el = document.documentElement;
-  if(SPLASH_ON){ el.style.background = '#30382A'; return; }
-  /* ⚠️ 'var(--v-card)' 를 인라인으로 넣으면 기기에 따라 무시됩니다.
-     계산된 색값(#FFFFFF 같은)을 직접 넣어야 확실합니다. */
-  el.style.background = $('app').classList.contains('on')
-    ? (tok('--v-card') || '#FFFFFF')   /* 하단 내비와 같은 색 */
-    : (tok('--v-bg')   || '#F7F6F1');  /* 로그인 화면 */
+  /* 화면 아래 '앱 바깥' 자리의 색입니다.
+     iOS 는 이 자리를 body 배경색으로 칠하므로 html 과 body 를 함께 넣습니다.
+     ⚠️ 'var(--v-card)' 를 인라인으로 넣으면 무시되는 기기가 있어
+        계산된 색값(#FFFFFF 같은)을 직접 넣습니다. */
+  const c = SPLASH_ON ? '#30382A'
+    : ($('app').classList.contains('on')
+        ? (tok('--v-card') || '#FFFFFF')   /* 본 화면 — 하단 내비와 같은 색 */
+        : (tok('--v-bg')   || '#F7F6F1')); /* 로그인 화면 */
+  document.documentElement.style.background = c;
+  document.body.style.background = c;
 }
 
 setTimeout(function(){
