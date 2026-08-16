@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <!-- maximum-scale 은 넣지 않는다. 독립 앱 모드에서 입력 칸 포커스를 막는다.
@@ -7,7 +7,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>버던_재고</title>
 
-<!-- 홈화면 아이콘 · 공통 코어 저장소에서 가져온다. 아이콘을 바꾸려면 그쪽 파일만 교체하면 된다. -->
 <link rel="apple-touch-icon" href="https://verdan2024.github.io/verdan-core/apple-touch-icon.png">
 <link rel="icon" href="https://verdan2024.github.io/verdan-core/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,51 +15,402 @@
 <meta name="apple-mobile-web-app-title" content="버던재고">
 <meta name="theme-color" content="#30382A">
 
-<!-- ── 공통 코어 ───────────────────────────────────────
-     ?v= 숫자만 올리면 캐시가 갈리고 새 코어가 적용된다.
-     문제가 생기면 이 숫자를 되돌리는 것만으로 즉시 롤백된다. -->
-<link rel="stylesheet" href="https://verdan2024.github.io/verdan-core/verdan-core.css?v=1.1.6">
-<script src="https://verdan2024.github.io/verdan-core/verdan-core.js?v=1.1.6"></script>
-
 <style>
-/* ── 이 앱에만 있는 것 ──────────────────────────────── */
-/* 거래처 상세 — 색은 verdan-core 팔레트 안에서만 고른다 */
-.vd{background:#FAFAF7;font-size:12px;line-height:2.0;}
-.vd b{display:inline-block;min-width:96px;color:var(--v-mute);font-weight:600;}
+/* ══════════════════════════════════════════════════════
+   버던_재고 v6.0   (버던_재고 API v3.6)
+
+   ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
+      새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
+      라이트/다크)를 실제 데이터로 먼저 검증하기 위해서입니다.
+      검증이 끝나면 이 파일의 CSS/JS 공통부를 verdan-core 1.2.0 으로
+      옮기고, 이 파일은 다시 코어를 참조하는 형태로 되돌립니다.
+
+   v5.1 → v6.0
+   ① 스플래시 1초 → 로그인 (자동 로그인이면 바로 본 화면)
+   ② 헤더 = 로고+화살표 / 앱이름  ·  새로고침 / ↻ 갱신시각
+      스크롤을 내리면 접히고 올리면 즉시 내려옵니다 (임계값 THRESH)
+   ③ 하위 세그먼트를 밑줄 방식으로. 값 선택용은 버튼 유지
+   ④ 각 화면 맨 아래 [새로고침] 3곳 삭제 → 헤더 하나로
+   ⑤ 접근로그 · 로그아웃을 마이페이지로 이동. 하단 내비 [홈][마이페이지]
+   ⑥ 이모지를 단색 SVG 아이콘 · 상태 점으로 교체
+   ⑦ 라이트/다크 색 토큰 두 벌
+   ══════════════════════════════════════════════════════ */
+
+/* ── 색 토큰 · 라이트 ───────────────────────────────
+   ⚠️ 색 코드를 직접 쓰지 마세요. 여기 값만 참조합니다. */
+:root{
+  /* 예전 --v-ink 이 헤더 · 주버튼 · 강조글자를 겸했는데,
+     다크에서 셋이 서로 다른 방향으로 가야 해서 쪼갰습니다. */
+  --v-header:#30382A;        /* 헤더 — 라이트/다크 동일 (같은 브랜드로 보이게) */
+  --v-cta:#30382A;           /* 주버튼 배경 */
+  --v-cta-txt:#FFFFFF;       /* 주버튼 글자 */
+  --v-strong:#30382A;        /* 강조 글자 */
+
+  --v-accent:#829568;
+  --v-accent2:#B2C58E;
+  --v-bg:#F7F6F1;
+  --v-card:#FFFFFF;
+  --v-soft:#FAFAF7;
+  --v-thead:#F2F1EC;
+  --v-seg:#EDEDE7;
+  --v-line:#E5E6DF;
+  --v-txt:#252721;
+  --v-mute:#696C64;
+  --v-ph:#A9AAA3;
+  --v-onink:#FFFFFF;
+  --v-link:#71869B;
+  --v-stale:#F0C9C6;
+  --v-wm:#252721;
+  --v-track:#E5E6DF;
+
+  --v-ok:#64815A;      --v-ok-bg:#EFF2EC;      --v-ok-line:#CFDAC6;
+  --v-warn:#B1844E;    --v-warn-bg:#F7F1E6;    --v-warn-line:#E3D2B4;
+  --v-danger:#B45F59;  --v-danger-bg:#F6EBEA;  --v-danger-line:#E4C6C4;
+
+  --v-d1:#B77C7C; --v-d2:#C48262; --v-d3:#8A7FA8; --v-d4:#71869B; --v-d5:#6D6462;
+
+  --v-radius:14px;
+  --wm-op:.05;
+  --hh:64px;              /* 헤더 높이 — JS 가 실측해 넣습니다 */
+  --ease:cubic-bezier(.22,.61,.36,1);
+}
+
+/* ── 색 토큰 · 다크 ─────────────────────────────────
+   색을 뒤집는 게 아니라 밝기로 층을 나눕니다.
+   bg < card < soft < seg 순서로 밝아집니다. */
+[data-theme="dark"]{
+  --v-header:#30382A;
+  --v-cta:#B2C58E;           /* 어두운 배경에서 Deep Olive 는 묻힙니다 */
+  --v-cta-txt:#23261F;
+  --v-strong:#E8EAE3;
+
+  --v-accent:#9FB283;
+  --v-accent2:#B2C58E;
+  --v-bg:#191B15;
+  --v-card:#23261F;
+  --v-soft:#2B2E26;
+  --v-thead:#2B2E26;
+  --v-seg:#32362C;
+  --v-line:#383B31;
+  --v-txt:#E8EAE3;
+  --v-mute:#9AA093;
+  --v-ph:#6E7468;
+  --v-onink:#FFFFFF;
+  --v-link:#9FB4C8;
+  --v-stale:#E4A5A0;
+  --v-wm:#E8EAE3;
+  --v-track:#32362C;
+
+  --v-ok:#8FAE83;      --v-ok-bg:#232A20;      --v-ok-line:#3A4834;
+  --v-warn:#D6A96A;    --v-warn-bg:#2E271B;    --v-warn-line:#4A3E28;
+  --v-danger:#D98A84;  --v-danger-bg:#2E211F;  --v-danger-line:#4C3230;
+
+  --v-d1:#C99191; --v-d2:#D89A78; --v-d3:#A196BE; --v-d4:#8AA0B6; --v-d5:#8C8380;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+
+/* ── 화면 뼈대 ──────────────────────────────────────
+   바깥(문서)은 스크롤되지 않게 잠그고 안쪽 판(.page)만 스크롤합니다.
+   문서 전체가 스크롤되면 iOS 에서 고무줄 반동이 생기고 주소창이
+   오르내리며 화면 높이가 계속 바뀌어 헤더·탭이 흔들립니다. */
+html{height:100%;overflow:hidden;}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
+  background:var(--v-bg);color:var(--v-txt);
+  position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;
+  display:flex;flex-direction:column;overscroll-behavior:none;touch-action:manipulation;
+  -webkit-text-size-adjust:100%;
+  transition:background-color .25s var(--ease),color .25s var(--ease);}
+
+/* ── 스플래시 ────────────────────────────────────── */
+#splash{position:fixed;inset:0;z-index:99999;background:#30382A;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .45s var(--ease);}
+#splash.gone{opacity:0;pointer-events:none;}
+#splash .logo{width:200px;height:auto;display:block;}
+
+/* ── 로그인 ─────────────────────────────────────── */
+#gate{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:none;display:none;
+  flex-direction:column;justify-content:center;
+  padding:calc(24px + env(safe-area-inset-top)) 26px calc(24px + env(safe-area-inset-bottom));}
+#gate.on{display:flex;}
+#gate .logo{width:140px;height:auto;display:block;margin-bottom:10px;}
+#gate .sub{font-size:13px;color:var(--v-mute);margin-bottom:26px;}
+#gate input{width:100%;padding:15px 16px;border:1px solid var(--v-line);border-radius:12px;
+  font-size:16px;margin-bottom:9px;font-family:inherit;background:var(--v-soft);color:var(--v-txt);
+  -webkit-user-select:text;user-select:text;touch-action:manipulation;}
+#gate input::placeholder{color:var(--v-ph);}
+#gate input:focus{outline:none;border-color:var(--v-accent);background:var(--v-card);}
+#gate button{width:100%;padding:15px;border:none;border-radius:12px;background:var(--v-cta);
+  color:var(--v-cta-txt);font-size:15px;font-weight:700;font-family:inherit;margin-top:5px;}
+#gate button:disabled{opacity:.55;}
+#gateMsg{font-size:13px;color:var(--v-danger);margin-top:12px;min-height:18px;line-height:1.6;
+  text-align:center;}
+#gateMsg.wait{color:var(--v-mute);}
+#gate .hint{font-size:11px;color:var(--v-mute);margin-top:12px;line-height:1.7;text-align:center;}
+
+/* ── 앱 뼈대 ────────────────────────────────────── */
+#app{display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
+#app.on{display:flex;}
+
+/* 헤더 + 탭을 한 덩어리로 묶습니다.
+   접히면 margin-top 을 헤더 높이만큼 음수로 줘서 헤더가 위로 잘려 나갑니다. */
+#chrome{flex-shrink:0;z-index:30;background:var(--v-header);
+  transition:margin-top .2s var(--ease);}
+#chrome.up{margin-top:calc(-1 * var(--hh));}
+
+#header{padding:calc(11px + env(safe-area-inset-top)) 18px 11px;
+  display:flex;align-items:flex-start;gap:12px;color:var(--v-onink);}
+#brandBtn{display:flex;align-items:center;gap:7px;background:none;border:none;
+  color:var(--v-onink);font-family:inherit;padding:0;}
+#brandBtn .logo{width:88px;height:auto;display:block;}
+#brandBtn .chev{width:19px;height:19px;border:1px solid rgba(255,255,255,.34);border-radius:5px;
+  display:flex;align-items:center;justify-content:center;transition:transform .25s var(--ease);}
+#brandBtn .chev svg{width:12px;height:12px;}
+#brandBtn.open .chev{transform:rotate(180deg);}
+#header .app{font-size:11.5px;opacity:.62;margin-top:4px;}
+#header .rt{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;}
+/* 얇은 외곽선 + 얇은 글씨. 채워진 버튼이 아닙니다. */
+#rfBtn{background:none;border:1px solid rgba(255,255,255,.3);border-radius:9px;
+  color:var(--v-onink);font-family:inherit;font-size:11.5px;font-weight:400;padding:6px 13px;}
+#rfBtn:active{background:rgba(255,255,255,.1);}
+/* 도는 아이콘은 버튼이 아니라 갱신시각 옆에 있습니다 */
+#stampRow{display:flex;align-items:center;gap:5px;margin-top:5px;
+  font-size:10.5px;opacity:.55;font-variant-numeric:tabular-nums;}
+#stampRow.stale{opacity:1;color:var(--v-stale);font-weight:700;}
+#stampRow svg{width:11px;height:11px;}
+#stampRow.busy svg{animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#tabs{display:flex;padding:0 8px;}
+#tabs button{flex:1;padding:12px 4px 11px;border:none;background:none;font-family:inherit;
+  font-size:13px;font-weight:600;color:rgba(255,255,255,.5);position:relative;}
+#tabs button.on{color:#fff;font-weight:800;}
+#tabs button.on::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:2.5px;
+  background:#fff;border-radius:2px;}
+
+.page{display:none;padding:16px 16px 0;}
+.page.on{display:block;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  overscroll-behavior:none;padding-bottom:calc(28px + env(safe-area-inset-bottom));}
+
+/* ── 카테고리 — 위에서 내려오는 판 ─────────────────── */
+#catWrap{position:fixed;left:0;right:0;top:0;z-index:61;pointer-events:none;}
+#catPanel{background:var(--v-bg);border-bottom:1px solid var(--v-line);
+  transform:translateY(-100%);transition:transform .3s var(--ease);
+  padding:calc(14px + env(safe-area-inset-top)) 14px 0;pointer-events:auto;}
+#catWrap.on #catPanel{transform:translateY(0);}
+#catGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+#catGrid a{background:var(--v-card);border:1px solid var(--v-line);border-radius:12px;
+  padding:15px 14px;text-decoration:none;display:block;}
+#catGrid a .t{font-size:14.5px;font-weight:700;color:var(--v-strong);
+  display:flex;align-items:center;gap:5px;}
+#catGrid a .t svg{width:13px;height:13px;opacity:.45;}
+#catGrid a .d{font-size:11px;color:var(--v-mute);margin-top:3px;}
+#catClose{display:flex;justify-content:flex-end;padding:14px 4px;}
+#catClose button{background:none;border:none;font-family:inherit;font-size:12.5px;
+  font-weight:600;color:var(--v-mute);text-decoration:underline;text-underline-offset:3px;}
+#scrim{position:fixed;inset:0;background:rgba(20,22,17,.42);z-index:60;opacity:0;
+  pointer-events:none;transition:opacity .25s var(--ease);}
+#scrim.on{opacity:1;pointer-events:auto;}
+
+/* ── 세그먼트 ────────────────────────────────────
+   .seg-nav  화면을 바꾸는 탐색용 — 밑줄 막대
+   .seg-pick 값을 고르는 컨트롤 — 버튼 (테마 전환 등) */
+.seg-nav{display:flex;gap:2px;border-bottom:1px solid var(--v-line);margin:-4px -16px 16px;
+  padding:0 16px;overflow-x:auto;scrollbar-width:none;}
+.seg-nav::-webkit-scrollbar{display:none;}
+.seg-nav button{border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;
+  color:var(--v-mute);padding:9px 12px 10px;position:relative;white-space:nowrap;}
+.seg-nav button.on{color:var(--v-strong);font-weight:800;}
+.seg-nav button.on::after{content:'';position:absolute;left:8px;right:8px;bottom:-1px;height:2.5px;
+  background:var(--v-strong);border-radius:2px;}
+
+.seg-pick{display:flex;gap:4px;background:var(--v-seg);border-radius:11px;padding:4px;}
+.seg-pick button{flex:1;padding:9px 4px;border:none;border-radius:8px;background:none;
+  font-family:inherit;font-size:12px;font-weight:700;color:var(--v-mute);white-space:nowrap;}
+.seg-pick button.on{background:var(--v-card);color:var(--v-strong);
+  box-shadow:0 1px 3px rgba(0,0,0,.08);}
+
+/* ── 카드 · 입력 ──────────────────────────────────
+   -webkit-user-select:text 가 없으면 독립 앱 모드에서 칸이 '선택만 되고
+   편집은 안 되는' 상태로 빠져 키보드가 올라오지 않습니다. */
+.card{background:var(--v-card);border:1px solid var(--v-line);border-radius:var(--v-radius);
+  padding:16px;margin-bottom:12px;}
+.card h3{font-size:12px;color:var(--v-mute);font-weight:700;margin-bottom:12px;}
+select,input.f,button.f{width:100%;padding:13px 14px;border:1px solid var(--v-line);
+  border-radius:12px;font-size:16px;margin-bottom:9px;font-family:inherit;
+  background:var(--v-soft);color:var(--v-txt);touch-action:manipulation;}
+select{-webkit-appearance:none;appearance:none;padding-right:36px;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e");
+  background-repeat:no-repeat;background-position:right 12px center;background-size:16px;}
+select.ph{color:var(--v-ph);}
+input.f{-webkit-user-select:text;user-select:text;}
+input.f::placeholder{color:var(--v-ph);}
+input.f:focus,select:focus{outline:none;border-color:var(--v-accent);background:var(--v-card);}
+button.f{background:var(--v-cta);color:var(--v-cta-txt);border:none;font-weight:700;margin-top:3px;}
+button.f:disabled{opacity:.5;}
+button.ghost{background:transparent;color:var(--v-strong);border:1px solid var(--v-line);
+  font-weight:600;}
+
+/* ── 구획 머리 — 이모지 대신 점 ───────────────────── */
+.sec{display:flex;align-items:center;gap:8px;margin:20px 0 9px;font-size:12.5px;
+  font-weight:700;color:var(--v-strong);}
+.sec .cnt{margin-left:auto;font-size:11.5px;color:var(--v-mute);font-weight:600;
+  font-variant-numeric:tabular-nums;}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block;
+  background:var(--v-mute);}
+.dot.ok{background:var(--v-ok);} .dot.warn{background:var(--v-warn);}
+.dot.danger{background:var(--v-danger);} .dot.mute{background:var(--v-ph);}
+.dot.d1{background:var(--v-d1);} .dot.d2{background:var(--v-d2);}
+.dot.d3{background:var(--v-d3);} .dot.d4{background:var(--v-d4);}
+
+/* ── 안내 상자 ────────────────────────────────────── */
+.box{border-radius:12px;padding:13px 15px;margin-bottom:12px;font-size:12.5px;line-height:1.75;
+  border:1px solid;}
+.box.ok{background:var(--v-ok-bg);border-color:var(--v-ok-line);color:var(--v-ok);}
+.box.note{background:var(--v-warn-bg);border-color:var(--v-warn-line);color:var(--v-warn);}
+.box.danger{background:var(--v-danger-bg);border-color:var(--v-danger-line);color:var(--v-danger);}
+.box b{font-weight:800;}
+.box .hd{display:flex;align-items:center;gap:7px;font-weight:800;margin-bottom:5px;}
+
+.summary{display:flex;align-items:baseline;gap:8px;padding:2px 2px 14px;}
+.summary .big{font-size:22px;font-weight:800;color:var(--v-strong);
+  font-variant-numeric:tabular-nums;}
+.summary .lb{font-size:12px;color:var(--v-mute);}
+
+/* ── 표 ───────────────────────────────────────────── */
+.tbl{background:var(--v-card);border:1px solid var(--v-line);border-radius:var(--v-radius);
+  overflow:hidden;margin-bottom:12px;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;}
+th{padding:9px 12px;text-align:right;font-size:10.5px;font-weight:600;color:var(--v-mute);
+  background:var(--v-thead);white-space:nowrap;}
+th:first-child{text-align:left;}
+td{padding:11px 12px;border-top:1px solid var(--v-line);text-align:right;
+  font-variant-numeric:tabular-nums;}
+td:first-child{text-align:left;}
+tbody tr:first-child td{border-top:none;}
+.nm{font-weight:600;color:var(--v-txt);}
+.sub2{font-size:10.5px;color:var(--v-mute);line-height:1.6;margin-top:2px;}
+.muted{color:var(--v-ph);}
+.dg{color:var(--v-danger);font-weight:700;}
+.lnk{color:var(--v-link);font-weight:600;border-bottom:1px solid currentColor;
+  padding-bottom:1px;font-size:12.5px;}
+.foot-note{font-size:11px;color:var(--v-mute);line-height:1.85;padding:2px 2px 6px;}
+.msg{font-size:12px;margin-top:8px;min-height:16px;line-height:1.6;}
+.msg.err{color:var(--v-danger);} .msg.good{color:var(--v-ok);}
+
+/* 거래처 상세 */
+.vd{background:var(--v-soft);padding:13px 14px !important;text-align:left !important;}
+.vd .row{display:grid;grid-template-columns:78px 1fr;gap:2px 12px;font-size:12px;line-height:1.9;}
+.vd .row .k{color:var(--v-mute);font-weight:600;}
 .vd a{color:var(--v-link);}
-.seg{margin-bottom:14px;}
+
+details{background:var(--v-card);border:1px solid var(--v-line);border-radius:var(--v-radius);
+  margin-bottom:12px;overflow:hidden;}
+details summary{list-style:none;padding:13px 15px;font-size:12.5px;font-weight:700;
+  color:var(--v-strong);display:flex;align-items:center;gap:8px;}
+details summary::-webkit-details-marker{display:none;}
+details summary .cnt{margin-left:auto;font-size:11.5px;color:var(--v-mute);font-weight:600;}
+details summary .chev{transition:transform .2s var(--ease);color:var(--v-mute);display:flex;}
+details[open] summary .chev{transform:rotate(90deg);}
+details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);margin:0;}
+
+/* ── 하단 내비 ────────────────────────────────────── */
+#bottom{flex-shrink:0;display:flex;background:var(--v-card);border-top:1px solid var(--v-line);
+  padding-bottom:env(safe-area-inset-bottom);z-index:40;}
+#bottom button{flex:1;border:none;background:none;font-family:inherit;padding:9px 0 8px;
+  display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--v-ph);}
+#bottom button.on{color:var(--v-strong);}
+#bottom svg{width:22px;height:22px;}
+#bottom .lb{font-size:10px;font-weight:600;}
+
+/* ── 마이페이지 ───────────────────────────────────── */
+.mp-top{display:flex;align-items:center;gap:13px;padding:6px 2px 22px;}
+.mp-top .av{width:46px;height:46px;border-radius:50%;background:var(--v-accent2);flex-shrink:0;}
+.mp-top .who{font-size:17px;font-weight:800;color:var(--v-strong);}
+.mp-top .sub{font-size:11.5px;color:var(--v-mute);margin-top:3px;}
+.mp-top .rt{margin-left:auto;}
+.mp-top .role{font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:9px;
+  background:var(--v-ok-bg);color:var(--v-ok);border:1px solid var(--v-ok-line);}
+.mp-blk{border-top:1px solid var(--v-line);padding:18px 2px 4px;}
+.mp-blk .ttl{font-size:11.5px;font-weight:700;color:var(--v-mute);margin-bottom:11px;}
+.ver{text-align:center;font-size:11px;color:var(--v-ph);padding:26px 0 16px;line-height:1.7;}
+#outBtn{margin-bottom:6px;}
+
+.log-r{padding:12px 2px;border-top:1px solid var(--v-line);font-size:12.5px;}
+.log-r:first-child{border-top:none;}
+.log-r .l1{display:flex;gap:8px;align-items:baseline;}
+.log-r .l1 b{color:var(--v-txt);}
+.log-r .t{font-size:11px;color:var(--v-ph);font-variant-numeric:tabular-nums;margin-left:auto;
+  white-space:nowrap;}
+.log-r .l2{font-size:11.5px;color:var(--v-mute);margin-top:3px;word-break:break-all;}
+.note{font-size:12px;color:var(--v-mute);text-align:center;padding:22px 14px;line-height:1.7;}
+.note.err{color:var(--v-danger);}
+
+/* ── 워터마크 ─────────────────────────────────────
+   캡쳐를 막을 수는 없으므로, 캡쳐된 이미지에 누가 언제 열었는지가
+   함께 찍히도록 하는 장치입니다. */
+#wm{position:fixed;inset:0;pointer-events:none;z-index:9000;overflow:hidden;display:none;}
+#wm span{position:absolute;white-space:nowrap;font-size:13px;font-weight:700;
+  color:var(--v-wm);opacity:var(--wm-op);transform:rotate(-30deg);}
+
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important;}}
 </style>
 </head>
 <body>
 
-<div id="app">
-  <div id="header"></div>
+<div id="splash">
+  <img class="logo" id="splashLogo" alt="VERDAN">
+</div>
 
-  <div id="tabs">
-    <button data-page="p1" class="on">재고</button>
-    <button data-page="p2">생산 계산</button>
-    <button data-page="p3" data-perm="log">입출고</button>
-    <button data-page="p4" data-perm="access">접근로그</button>
+<!-- 로그인 · 입력 순서는 이름 → 비밀번호 -->
+<div id="gate">
+  <img class="logo" id="gateLogo" alt="VERDAN">
+  <div class="sub">버던_재고</div>
+  <input type="text" id="nm" placeholder="이름" autocomplete="name" maxlength="20">
+  <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password">
+  <button id="loginBtn">로그인</button>
+  <div id="gateMsg"></div>
+  <div class="hint">본인 이름을 입력하세요. 접근로그에 기록됩니다.<br>
+    <span id="verLine"></span></div>
+</div>
+
+<div id="app">
+  <div id="chrome">
+    <div id="header">
+      <div>
+        <button id="brandBtn"><img class="logo" id="headLogo" alt="VERDAN"><span class="chev"></span></button>
+        <div class="app">버던_재고</div>
+      </div>
+      <div class="rt">
+        <button id="rfBtn">새로고침</button>
+        <div id="stampRow"><span id="rfIcon"></span><span id="stamp">—</span></div>
+      </div>
+    </div>
+    <div id="tabs">
+      <button data-page="p1" class="on">재고</button>
+      <button data-page="p2">생산 계산</button>
+      <button data-page="p3" data-perm="log">입출고</button>
+    </div>
   </div>
 
   <!-- 재고 -->
   <div id="p1" class="page on">
-    <div class="seg">
-      <button id="sgP" class="on" onclick="stockView('prod')">제품</button>
-      <button id="sgM" onclick="stockView('mat')">부자재</button>
+    <div class="seg-nav" id="segStock">
+      <button class="on" data-k="prod">제품</button>
+      <button data-k="mat">부자재</button>
     </div>
     <div id="prodBody" data-clear></div>
-    <div id="stockBody" data-clear style="display:none"></div>
-    <button class="f ghost" id="reloadBtn" onclick="VERDAN.reload(true)">새로고침</button>
+    <div id="matBody" data-clear style="display:none"></div>
   </div>
 
   <!-- 생산 계산 -->
   <div id="p2" class="page">
     <div class="card">
       <h3>생산 계획</h3>
-      <select id="cDesign" data-clear></select>
+      <select id="cDesign" class="ph" data-clear></select>
       <input class="f" type="number" id="cQty" data-reset placeholder="생산 수량" inputmode="numeric">
-      <button class="f" onclick="calc()">계산</button>
+      <button class="f" id="calcBtn">계산</button>
     </div>
     <div id="calcBody" data-clear></div>
   </div>
@@ -73,436 +423,888 @@
       <select id="fKind" data-clear></select>
       <select id="fReason" data-clear></select>
       <input class="f" type="number" id="fQty" data-reset placeholder="수량" inputmode="numeric">
-      <div class="sub2" style="margin:-4px 0 10px">입고·출고는 양수만. 음수는 [조정]에서만.</div>
+      <div class="sub2" style="margin:-4px 0 12px">입고·출고는 양수만. 음수는 [조정]에서만.</div>
       <input class="f" type="text" id="fRef" data-reset placeholder="관련번호 (발주번호 · 로트 · 해당 월)">
       <input class="f" type="text" id="fMemo" data-reset placeholder="메모 (선택)">
-      <button class="f" id="logBtn" onclick="submitLog()">등록</button>
+      <button class="f" id="logBtn">등록</button>
       <div class="msg" id="logMsg"></div>
     </div>
   </div>
 
-  <!-- 접근로그
-       접속 / 기록 두 탭과 표는 코어가 그립니다.
-       이 앱에는 채팅이 없으므로 채팅 탭을 만들지 않습니다(logKinds). -->
-  <div id="p4" class="page">
-    <div class="seg" id="segLog"></div>
-    <div id="accessBody" data-clear></div>
-    <button class="f ghost" onclick="VERDAN.loadLogs(true)">새로고침</button>
+  <!-- 마이페이지 -->
+  <div id="p9" class="page">
+    <div class="mp-top">
+      <div class="av"></div>
+      <div>
+        <div class="who" id="mpName">—</div>
+        <div class="sub">버던_재고</div>
+      </div>
+      <div class="rt"><span class="role" id="mpRole">—</span></div>
+    </div>
+
+    <div class="mp-blk">
+      <div class="ttl">테마</div>
+      <div class="seg-pick" id="segTheme" style="max-width:220px">
+        <button class="on" data-v="light">라이트</button>
+        <button data-v="dark">다크</button>
+      </div>
+    </div>
+
+    <!-- 접근로그 — 관리자에게만 만들어집니다 -->
+    <div class="mp-blk" id="logWrap" style="display:none">
+      <div class="ttl">접근로그</div>
+      <div class="seg-nav" id="segLog" style="margin:0 0 6px;padding:0">
+        <button class="on" data-k="access">접속</button>
+        <button data-k="work">기록</button>
+      </div>
+      <div id="logBody" data-clear></div>
+    </div>
+
+    <div class="ver" id="verFoot"></div>
+    <button class="f ghost" id="outBtn">로그아웃</button>
   </div>
 
-  <div class="foot">버던_재고 · v5.1 · core <span id="coreVer"></span></div>
+  <div id="bottom"></div>
 </div>
+
+<div id="scrim"></div>
+<div id="catWrap">
+  <div id="catPanel">
+    <div id="catGrid"></div>
+    <div id="catClose"><button>닫기</button></div>
+  </div>
+</div>
+
+<div id="wm" aria-hidden="true"></div>
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v5.1   (verdan-core 1.1.0 / 버던_재고 API v3.6)
-   공통 부분(로그인·통신·워터마크·세션·권한)은 verdan-core.js 가 처리한다.
-   이 파일에는 재고 · BOM · 발주 계산 로직만 둔다.
-
-   v5.0 → v5.1
-   ① 접근로그를 코어가 그린다 (V.loadLogs).
-      탭이 접속 / 기록 둘로 나뉜다.
-        접속 = 로그인 성공·실패
-        기록 = 입출고 등록 · 중복 확인 · 권한거부
-      서버가 각 줄에 kind 를 붙여 보내고, 자동 처리분은 코어가 걸러낸다.
-   ② 채팅 탭은 만들지 않는다. 이 앱에는 채팅 기능이 없다.
-      서버도 features.chat=false 로 알려 온다.
-   ③ 로그인 안내 문구(hint) → 코어 고정. 앱에서 넘기지 않는다.
-      예전에는 "입출고 기록에 함께 남습니다" 로 혼자 달랐다.
+   버던_재고 v6.0
+   서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
+   바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
 
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-/* 코어 도구를 짧은 이름으로 당겨 쓴다 */
-const V = VERDAN;
-const esc = V.esc, jsq = V.js, n = V.n, num = V.num;
+const APP_VER  = 'v6.0';
+/* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
+   로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
+const LOGO = {
+  light: 'https://verdan2024.github.io/verdan-core/logo-light.png?v=1',  /* 어두운 배경용 */
+  dark : 'https://verdan2024.github.io/verdan-core/logo-dark.png?v=1'    /* 밝은 배경용 */
+};
+const STORE    = { pw:'verdan_pw', user:'verdan_user', theme:'verdan_theme' };
+const LEGACY   = ['bujae_pw'];
+/* 읽기는 빨리 포기하고 쓰기는 끝까지 기다린다.
+   실패 대가가 다르기 때문이다 — 읽기는 다시 부르면 되지만 쓰기는 중복 위험이 있다. */
+const TIMEOUT  = { read:12000, write:30000 };
+const RECHECK  = 30000;
+const THRESH   = 5;      /* 헤더 접힘 임계값 — 실기기에서 조정 */
 
-/* 접근로그 상태(목록 · 보고 있는 탭 · 불러왔는지)는 코어가 들고 있다 */
+/* 권한표 — 서버의 ROLES 와 짝을 맞춘다 */
+const PERM = {
+  admin : { label:'관리자', log:true,  vendor:true,  access:true  },
+  staff : { label:'담당자', log:true,  vendor:true,  access:false },
+  guest : { label:'게스트', log:false, vendor:false, access:false }
+};
+const NOPERM = { label:'—', log:false, vendor:false, access:false };
 
-VERDAN.init({
-  scriptUrl : SCRIPT_URL,
-  appId     : 'stock',
-  title     : '버던_재고',
-  icon      : '📦',
-  iconUrl   : 'https://verdan2024.github.io/verdan-core/apple-touch-icon.png',
-  appVersion: 'v5.1',
+/* 카테고리 — 이 배열만 고치면 항목이 늘고 줄어듭니다 */
+const LINKS = [
+  {t:'VERDAN',    d:'홈페이지',    u:'https://verdan.co.kr'},
+  {t:'MUSINSA',   d:'무신사',      u:'https://www.musinsa.com'},
+  {t:'29CM',      d:'29CM',        u:'https://www.29cm.co.kr'},
+  {t:'INSTAGRAM', d:'인스타그램',  u:'https://www.instagram.com'},
+  {t:'MAGAZINE',  d:'버던 매거진', u:'https://verdan.co.kr'}
+];
 
-  /* 기존 사용자가 다시 로그인하지 않도록 예전 저장 키를 그대로 쓴다 */
-  store     : { pw:'verdan_pw', user:'verdan_user' },
-  legacyKeys: ['bujae_pw'],
+/* 발주 알림을 띄우지 않는 분류.
+   원단은 생산할 때마다 발주하는 물건이라 재고 0이 정상 상태다.
+   그대로 두면 매번 빨간 점이 떠서 정작 봐야 할 품목이 묻힌다. */
+const NO_ALERT = ['원단'];
 
-  /* 읽기는 빨리 포기하고, 쓰기는 끝까지 기다린다.
-     실패 대가가 다르기 때문이다 — 읽기는 다시 부르면 되지만 쓰기는 중복 위험이 있다. */
-  timeout   : { read:12000, write:30000 },
-  recheckMs : 30000,
-  wmOpacity : 0.05,
+/* 분류 구획. 새 분류가 생겨도 여기에 한 줄 더하면 된다. */
+const CATS = [
+  { k:'생산', t:'생산 부자재', dot:'d4' },
+  { k:'출고', t:'출고 부자재', dot:'ok' },
+  { k:'원단', t:'원단',        dot:'d2' }
+];
 
-  /* 권한표 — 서버의 ROLES 와 짝을 맞춘다 */
-  perm: {
-    admin : { label:'관리자', log:true,  vendor:true,  access:true  },
-    staff : { label:'담당자', log:true,  vendor:true,  access:false },
-    guest : { label:'게스트', log:false, vendor:false, access:false }
-  },
-  noperm: { label:'—', log:false, vendor:false, access:false },
+/* ── 상태 ─────────────────────────────────────────── */
+let PW='', USER='', ROLE='', DATA=null, FEAT=null;
+let PAGE='p1', LASTMAIN='p1', NAV='home', LOGVIEW='access';
+let LOGS=[], logsLoaded=false, BUSY=false, LAST=0;
+const IDEM = {};   /* 멱등키 — 같은 작업을 다시 눌러도 서버가 중복을 걸러낸다 */
 
-  onStart : boot,
-  onData  : redraw,
-  /* 이 앱에는 채팅이 없다. 접근로그 탭을 두 개만 만든다. */
-  logKinds: ['access','work'],
+/* ── 작은 도구 ────────────────────────────────────── */
+const $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function num(v){
+  if(v===''||v===null||v===undefined) return null;
+  const x = Number(v);
+  return isNaN(x) ? null : x;
+}
+function n(v){ const x=num(v); return x===null ? '—' : x.toLocaleString('ko-KR'); }
+function setHTML(id,h){ const e=$(id); if(e) e.innerHTML=h; }
+function setVal(id,v){ const e=$(id); if(e) e.value=v; }
 
-  onTab   : function(p){ if(p==='p4') V.loadLogs(false); },
-  onLogout: function(){ stockView('prod'); lm('',false); }
+function store(k,v){
+  try{
+    if(v===undefined) return localStorage.getItem(k);
+    if(v===null) localStorage.removeItem(k); else localStorage.setItem(k,v);
+  }catch(e){ return null; }
+}
+
+/* ── 아이콘 (이모지 대신 단색 SVG) ────────────────── */
+const ICON = {
+  refresh:'<path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/>',
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5.5 9.6V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V9.6"/>',
+  user:'<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  down:'<polyline points="6 9 12 15 18 9"/>',
+  chev:'<polyline points="9 6 15 12 9 18"/>',
+  ext:'<path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>'
+};
+function ic(name,size){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" '+
+    'stroke-linecap="round" stroke-linejoin="round"'+
+    (size?' style="width:'+size+'px;height:'+size+'px"':'')+'>'+ICON[name]+'</svg>';
+}
+
+/* ── 테마 — 로그인 정보가 아니라 개인 취향이므로 로그아웃해도 유지 ──
+   스플래시보다 먼저 적용합니다. 라이트로 떴다가 다크로 바뀌면 눈이 부십니다. */
+let THEME = store(STORE.theme) || 'light';
+applyTheme(THEME);
+
+function applyTheme(v){
+  THEME = v;
+  document.documentElement.dataset.theme = v;
+  /* 스플래시와 헤더는 언제나 어두운 배경이라 밝은 로고를 씁니다.
+     로그인 화면만 배경이 테마를 따라가므로 로고도 함께 바꿉니다. */
+  const gl = $('gateLogo');
+  if(gl) gl.src = (v==='dark') ? LOGO.light : LOGO.dark;
+}
+
+/* ── 권한 ─────────────────────────────────────────
+   서버가 모르는 role 을 보내도 권한이 닫히는 쪽으로 떨어집니다. */
+function perm(){ return PERM[ROLE] || NOPERM; }
+function can(k){
+  /* 서버가 features 로 "그 기능 자체가 없다"고 하면 권한과 무관하게 닫습니다 */
+  if(FEAT && FEAT[k]===false) return false;
+  return !!perm()[k];
+}
+
+/* ── 통신 ─────────────────────────────────────────── */
+async function api(params, opt){
+  opt = opt || {};
+  const q = new URLSearchParams();
+  q.set('key', PW); q.set('user', USER);
+  Object.keys(params||{}).forEach(function(k){
+    if(params[k]!==undefined && params[k]!==null) q.set(k, params[k]);
+  });
+  if(opt.idem){
+    if(!IDEM[opt.idem]) IDEM[opt.idem] = 'R'+Date.now()+Math.random().toString(36).slice(2,8);
+    q.set('reqId', IDEM[opt.idem]);
+  }
+  const ms = (opt.mode==='write') ? TIMEOUT.write : TIMEOUT.read;
+  const ctl = new AbortController();
+  const timer = setTimeout(function(){ ctl.abort(); }, ms);
+  try{
+    const res = await fetch(SCRIPT_URL+'?'+q.toString(), { method:'GET', signal:ctl.signal });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    return await res.json();
+  } finally { clearTimeout(timer); }
+}
+function isTimeout(e){ return e && (e.name==='AbortError' || /aborted/i.test(String(e.message))); }
+function failMsg(e, tail){
+  /* 시간 초과는 실패가 아니라 "모름"입니다. 서버는 계속 실행 중일 수 있습니다.
+     그래서 "다시 시도하세요"가 아니라 확인부터 안내합니다. */
+  return isTimeout(e)
+    ? ('응답을 받지 못했습니다. ' + (tail || '반영 여부를 먼저 확인하세요.'))
+    : ('통신에 실패했습니다. ' + (tail || '잠시 후 다시 시도하세요.'));
+}
+
+/* ── 스플래시 → 로그인 또는 자동 로그인 ───────────── */
+setTimeout(function(){
+  $('splash').classList.add('gone');
+  setTimeout(function(){ $('splash').style.display='none'; }, 480);
+}, 1000);
+
+$('verLine').textContent = APP_VER;
+$('verFoot').innerHTML = '버던_재고 '+APP_VER;
+
+(function init(){
+  buildIcons(); buildCat(); buildBottom(); bindAll();
+  /* 기존 사용자가 다시 로그인하지 않도록 예전 저장 키도 본다 */
+  let saved = store(STORE.pw);
+  if(!saved){
+    for(let i=0;i<LEGACY.length;i++){
+      const v = store(LEGACY[i]);
+      if(v){ saved = v; store(STORE.pw, v); break; }
+    }
+  }
+  const savedUser = store(STORE.user) || '';
+  setVal('nm', savedUser);
+  if(saved){
+    PW = saved; USER = savedUser || '(미입력)';
+    autoLogin();
+  }else{
+    $('gate').classList.add('on');
+  }
+})();
+
+async function autoLogin(){
+  try{
+    const r = await api({});
+    if(r && r.ok){ enter(r); return; }
+  }catch(e){ /* 아래에서 로그인 화면을 띄웁니다 */ }
+  PW=''; store(STORE.pw, null);
+  $('gate').classList.add('on');
+  gmsg('비밀번호가 변경되었습니다. 다시 입력해 주세요.', false);
+}
+
+/* ── 로그인 ───────────────────────────────────────── */
+function gmsg(t, wait){
+  const el=$('gateMsg'); el.textContent=t; el.className = wait?'wait':'';
+}
+$('loginBtn').addEventListener('click', login);
+$('nm').addEventListener('keydown', function(e){ if(e.key==='Enter') $('pw').focus(); });
+$('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') login(); });
+
+async function login(){
+  const nm = ($('nm').value||'').trim();
+  const pw = ($('pw').value||'').trim();
+  if(!nm){ gmsg('이름을 입력하세요.'); return; }
+  if(!pw){ gmsg('비밀번호를 입력하세요.'); return; }
+  const btn=$('loginBtn'); btn.disabled=true;
+  gmsg('접속 중입니다. 잠시만 기다려주세요.', true);
+  PW = pw; USER = nm;
+  try{
+    const r = await api({});
+    if(!r || !r.ok){
+      PW=''; gmsg((r && r.msg) || '비밀번호가 올바르지 않습니다.');
+      return;
+    }
+    store(STORE.pw, pw); store(STORE.user, nm);
+    setVal('pw','');
+    enter(r);
+  }catch(e){
+    PW=''; gmsg(failMsg(e,'[로그인]을 다시 눌러주세요.'));
+  }finally{ btn.disabled=false; }
+}
+
+function enter(r){
+  $('gate').classList.remove('on');
+  $('app').classList.add('on');
+  gmsg('');
+  setData(r);
+  boot();
+}
+
+function logout(){
+  PW=''; ROLE=''; DATA=null; FEAT=null; LOGS=[]; logsLoaded=false;
+  store(STORE.pw, null);
+  LEGACY.forEach(function(k){ store(k, null); });
+  /* 화면을 건드리기 전에 값부터 지웁니다 — 화면 쪽에서 오류가 나도 값은 반드시 지워지도록 */
+  document.querySelectorAll('[data-clear]').forEach(function(e){ e.innerHTML=''; });
+  document.querySelectorAll('[data-reset]').forEach(function(e){ e.value=''; });
+  $('wm').style.display='none';
+  $('app').classList.remove('on');
+  $('gate').classList.add('on');
+  NAV='home'; LASTMAIN='p1'; go('p1'); paintBottom();
+}
+
+/* 다른 탭에서 로그아웃하면 이쪽도 따라 나갑니다 */
+window.addEventListener('storage', function(e){
+  if(e.key===STORE.pw && !e.newValue && PW) logout();
 });
 
-document.getElementById('coreVer').textContent = VERDAN.version;
+/* ── 부팅 · 데이터 ────────────────────────────────── */
+function boot(){
+  $('mpName').textContent = USER;
+  $('mpRole').textContent = perm().label;
+  $('verFoot').innerHTML = '버던_재고 '+APP_VER;
+  applyPerm();
+  fillSelects();
+  watermark();
+  measure();
+  go('p1');
+}
 
-/* ── 로그인 직후 1회 ───────────────────── */
-function boot(D){
-  /* 생산 계산 — 제품 목록 */
-  const designs = [];
-  D.bom.forEach(function(b){
-    if(!designs.some(function(d){ return d.code===b.dcode; }))
-      designs.push({ code:b.dcode, name:b.dname });
+function setData(r){
+  DATA = r;
+  ROLE = r.role || '';
+  FEAT = r.features || null;
+  LAST = Date.now();
+  stamp(r.updated, false);
+  $('mpRole').textContent = perm().label;
+  renderProducts();
+  renderMaterials();
+}
+
+function applyPerm(){
+  document.querySelectorAll('#tabs button[data-perm]').forEach(function(b){
+    b.style.display = can(b.dataset.perm) ? '' : 'none';
   });
-  fill('cDesign', designs.map(function(d){ return {v:d.code, t:d.name}; }), '제품 선택');
-
-  /* 입출고 — 권한이 있을 때만 채운다 */
-  if(V.can('log')){
-    fill('fCode', D.materials.map(function(m){ return {v:m.code, t:m.code+' · '+m.name}; }), '부자재 선택');
-    fill('fKind',   D.kinds.map(function(k){ return {v:k,t:k}; }),   '구분 선택');
-    fill('fReason', D.reasons.map(function(k){ return {v:k,t:k}; }), '사유 선택');
-  }else{
-    ['fCode','fKind','fReason'].forEach(function(id){ V.setHTML(id,''); });
-    lm('', false);
+  /* 접근로그는 권한 있는 사람에게만. 없으면 영역 자체를 만들지 않습니다. */
+  $('logWrap').style.display = can('access') ? '' : 'none';
+  if(!can('log')){
+    if(LASTMAIN==='p3') LASTMAIN='p1';
+    if(PAGE==='p3') go('p1');
+    ['fCode','fKind','fReason'].forEach(function(id){ setHTML(id,''); });
   }
-
-  redraw(D);
-  stockView('prod');
 }
 
-/* ── 데이터가 새로 들어올 때마다 ───────── */
-function redraw(D){
-  renderProducts(D);
-  renderStock(D);
+/* 헤더 갱신 시각. 실패하면 붉게 남겨 오래된 숫자를 최신으로 착각하지 않게 합니다. */
+function stamp(updated, stale){
+  const el=$('stamp');
+  if(updated) el.textContent = String(updated).slice(5);   /* MM-dd HH:mm */
+  $('stampRow').classList.toggle('stale', !!stale);
 }
 
-function fill(id, items, ph){
-  V.setHTML(id, '<option value="">'+ph+'</option>' +
+async function reload(showBusy){
+  if(BUSY) return;
+  BUSY = true;
+  if(showBusy) $('stampRow').classList.add('busy');
+  try{
+    const r = await api({});
+    if(r && r.ok){ setData(r); }
+    else { stamp(null, true); }
+  }catch(e){
+    stamp(null, true);
+  }finally{
+    BUSY = false;
+    $('stampRow').classList.remove('busy');
+  }
+}
+
+/* 앱으로 되돌아오면 다시 물어봅니다 (최소 30초 간격) */
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState!=='visible' || !PW) return;
+  if(Date.now()-LAST < RECHECK) return;
+  reload(false);
+});
+
+/* ── 헤더 접힘 · 무신사 방식 ──────────────────────── */
+let lastY=0, ticking=false;
+function measure(){
+  document.documentElement.style.setProperty('--hh', $('header').offsetHeight+'px');
+}
+window.addEventListener('resize', function(){ measure(); if(PW) watermark(); });
+
+function onScroll(e){
+  const el = e.currentTarget;
+  if(ticking) return;
+  ticking = true;
+  requestAnimationFrame(function(){
+    const y = el.scrollTop, hh = $('header').offsetHeight, d = y - lastY;
+    if(y <= 0)                     setUp(false);
+    else if(y > hh && d > THRESH)  setUp(true);
+    else if(d < -THRESH)           setUp(false);
+    lastY = y; ticking = false;
+  });
+}
+function setUp(on){ $('chrome').classList.toggle('up', on); }
+
+/* ── 화면 전환 ────────────────────────────────────── */
+function go(id){
+  PAGE = id;
+  if(id!=='p9') LASTMAIN = id;      /* [홈]으로 돌아올 자리를 기억합니다 */
+  $('tabs').style.display = (id==='p9') ? 'none' : 'flex';
+  document.querySelectorAll('#tabs button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.page===id);
+  });
+  document.querySelectorAll('.page').forEach(function(p){
+    p.classList.toggle('on', p.id===id);
+  });
+  /* 탭을 옮기면 헤더는 펼친 상태로 초기화합니다 */
+  setUp(false); lastY = 0;
+  const cur=$(id); if(cur) cur.scrollTop = 0;
+  if(id==='p9' && can('access')) loadLogs(false);
+}
+
+/* 재고 앱에는 채팅이 없으므로 하단은 두 칸입니다 */
+const NAVS = [
+  {k:'home', lb:'홈',         icon:'home'},
+  {k:'my',   lb:'마이페이지', icon:'user'}
+];
+function buildBottom(){
+  setHTML('bottom', NAVS.map(function(o){
+    return '<button data-k="'+o.k+'">'+ic(o.icon)+'<span class="lb">'+o.lb+'</span></button>';
+  }).join(''));
+  paintBottom();
+}
+function paintBottom(){
+  document.querySelectorAll('#bottom button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.k===NAV);
+  });
+}
+
+/* ── 카테고리 판 ──────────────────────────────────── */
+function buildCat(){
+  setHTML('catGrid', LINKS.map(function(l){
+    return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener">'+
+      '<div class="t">'+esc(l.t)+ic('ext')+'</div>'+
+      '<div class="d">'+esc(l.d)+'</div></a>';
+  }).join(''));
+}
+function openCat(on){
+  $('catWrap').classList.toggle('on', on);
+  $('scrim').classList.toggle('on', on);
+  $('brandBtn').classList.toggle('open', on);
+}
+
+function buildIcons(){
+  $('brandBtn').querySelector('.chev').innerHTML = ic('down');
+  $('rfIcon').innerHTML = ic('refresh');
+  /* 어두운 배경 위에 올라가는 두 곳은 밝은 로고 고정 */
+  $('splashLogo').src = LOGO.light;
+  $('headLogo').src   = LOGO.light;
+  $('gateLogo').src   = (THEME==='dark') ? LOGO.light : LOGO.dark;
+}
+
+/* ── 이벤트 묶기 ──────────────────────────────────── */
+function bindAll(){
+  document.querySelectorAll('.page').forEach(function(p){
+    p.addEventListener('scroll', onScroll, {passive:true});
+  });
+  $('tabs').addEventListener('click', function(e){
+    const b = e.target.closest('button[data-page]');
+    if(b){ NAV='home'; go(b.dataset.page); paintBottom(); }
+  });
+  $('bottom').addEventListener('click', function(e){
+    const b = e.target.closest('button[data-k]');
+    if(!b) return;
+    NAV = b.dataset.k;
+    go(NAV==='my' ? 'p9' : LASTMAIN);
+    paintBottom();
+  });
+  $('brandBtn').addEventListener('click', function(){
+    openCat(!$('catWrap').classList.contains('on'));
+  });
+  $('scrim').addEventListener('click', function(){ openCat(false); });
+  $('catClose').addEventListener('click', function(){ openCat(false); });
+
+  /* 새로고침 — 지금 보고 있는 화면에 맞게 동작합니다 */
+  $('rfBtn').addEventListener('click', function(){
+    if($('stampRow').classList.contains('busy')) return;
+    if(PAGE==='p9' && can('access')){
+      $('stampRow').classList.add('busy');
+      loadLogs(true).finally(function(){ $('stampRow').classList.remove('busy'); });
+    }else{
+      reload(true);
+    }
+  });
+
+  segBind('segStock', function(k){
+    const isProd = (k==='prod');
+    $('prodBody').style.display = isProd ? '' : 'none';
+    $('matBody').style.display  = isProd ? 'none' : '';
+  });
+  segBind('segLog', function(k){ LOGVIEW=k; renderLogs(); });
+  segBind('segTheme', function(v){
+    applyTheme(v);
+    store(STORE.theme, v);
+  });
+  document.querySelectorAll('#segTheme button').forEach(function(b){
+    b.classList.toggle('on', b.dataset.v===THEME);
+  });
+
+  $('calcBtn').addEventListener('click', calc);
+  $('logBtn').addEventListener('click', submitLog);
+  $('outBtn').addEventListener('click', function(){
+    if(confirm('로그아웃할까요?')) logout();
+  });
+  $('cDesign').addEventListener('change', function(){
+    this.className = this.value ? '' : 'ph';
+  });
+}
+function segBind(id, fn){
+  const box=$(id); if(!box) return;
+  box.addEventListener('click', function(e){
+    const b = e.target.closest('button');
+    if(!b) return;
+    this.querySelectorAll('button').forEach(function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    fn(b.dataset.k || b.dataset.v);
+  });
+}
+
+/* ── 드롭다운 ─────────────────────────────────────── */
+function fillSelects(){
+  const D = DATA; if(!D) return;
+  const seen=[], designs=[];
+  (D.bom||[]).forEach(function(b){
+    if(seen.indexOf(b.dcode)<0){ seen.push(b.dcode); designs.push(b); }
+  });
+  opt('cDesign','제품 선택', designs.map(function(d){ return {v:d.dcode,t:d.dname}; }));
+  if(can('log')){
+    opt('fCode','부자재 선택', (D.materials||[]).map(function(m){
+      return {v:m.code, t:m.code+' · '+m.name}; }));
+    opt('fKind','구분 선택', (D.kinds||[]).map(function(k){ return {v:k,t:k}; }));
+    opt('fReason','사유 선택', (D.reasons||[]).map(function(k){ return {v:k,t:k}; }));
+  }
+}
+function opt(id, ph, items){
+  setHTML(id, '<option value="">'+ph+'</option>'+
     items.map(function(i){ return '<option value="'+esc(i.v)+'">'+esc(i.t)+'</option>'; }).join(''));
 }
 
-/* ── 재고: 제품 | 부자재 전환 ─────────── */
-function stockView(v){
-  const isProd = (v === 'prod');
-  V.setDisp('prodBody',  isProd ? 'block' : 'none');
-  V.setDisp('stockBody', isProd ? 'none'  : 'block');
-  const p=document.getElementById('sgP'), m=document.getElementById('sgM');
-  if(p) p.className = isProd ? 'on' : '';
-  if(m) m.className = isProd ? ''   : 'on';
-}
-
-/* ── 제품 재고 (조회 전용) ────────────── */
+/* ── 제품 재고 (조회 전용) ────────────────────────── */
 function 디자인명(name){
-  const s = String(name).replace(/^\[[^\]]*\]\s*/, '');   // [REFURB] · [협찬] 제거
+  const s = String(name).replace(/^\[[^\]]*\]\s*/, '');   /* [REFURB] · [협찬] 제거 */
   const i = s.indexOf('_');
-  return i > 0 ? s.substring(0, i) : s;
+  return i>0 ? s.substring(0,i) : s;
 }
+function 합(a){ return a.reduce(function(s,x){ return s + (Number(x.tot)||0); }, 0); }
 
 function 제품표(rows, 상품명표시){
   const body = rows.map(function(x){
-    const zero = x.tot <= 0;
-    const sub = 상품명표시 ? esc(x.name) : esc(x.code);
-    return '<tr>'+
-      '<td><b>'+esc(x.opt || 디자인명(x.name))+'</b>'+
-        '<div class="sub2">'+sub+'</div></td>'+
-      '<td class="num">'+n(x.wh)+'</td>'+
-      '<td class="num">'+n(x.ff)+'</td>'+
-      '<td class="num '+(zero?'danger':'')+'">'+(zero ? '품절' : n(x.tot))+'</td></tr>';
+    const zero = x.tot<=0;
+    return '<tr><td><span class="nm">'+esc(x.opt || 디자인명(x.name))+'</span>'+
+      '<div class="sub2">'+esc(상품명표시 ? x.name : x.code)+'</div></td>'+
+      '<td>'+n(x.wh)+'</td><td>'+n(x.ff)+'</td>'+
+      '<td class="'+(zero?'dg':'')+'">'+(zero ? '품절' : n(x.tot))+'</td></tr>';
   }).join('');
-  return '<div class="tbl-wrap"><table><thead><tr>'+
-    '<th style="text-align:left">옵션</th><th>창고</th><th>풀필</th><th>총</th>'+
+  return '<div class="tbl"><table><thead><tr>'+
+    '<th>옵션</th><th>창고</th><th>풀필</th><th>총</th>'+
     '</tr></thead><tbody>'+body+'</tbody></table></div>';
 }
+function 접기(title, cnt, inner){
+  return '<details><summary><span class="chev">'+ic('chev',13)+'</span>'+esc(title)+
+    '<span class="cnt">'+esc(cnt)+'</span></summary>'+inner+'</details>';
+}
 
-function renderProducts(D){
+function renderProducts(){
+  const D = DATA;
   const P = (D && D.products) ? D.products : null;
 
   if(!P || !P.ok){
-    V.setHTML('prodBody', '<div class="box-note">제품 재고를 불러오지 못했습니다.'+
-      ((P && P.msg) ? '<br>'+esc(P.msg) : '')+
-      '<br>재고관리_메인 파일의 접근 권한을 확인하세요.</div>');
+    setHTML('prodBody', '<div class="box note"><div class="hd">'+
+      '<span class="dot warn"></span>제품 재고를 불러오지 못했습니다</div>'+
+      ((P && P.msg) ? esc(P.msg)+'<br>' : '')+
+      '재고관리_메인 파일의 접근 권한을 확인하세요.</div>');
     return;
   }
 
   const items = P.items || [];
-  const 정상 = items.filter(function(x){ return x.kind === '정상품'; });
+  const 정상 = items.filter(function(x){ return x.kind==='정상품'; });
   /* 리퍼브·협찬은 재고가 있는 것만 — 0은 볼 이유가 없다 */
-  const 리퍼브 = items.filter(function(x){ return x.kind.indexOf('리퍼브') >= 0 && x.tot > 0; });
-  const 협찬  = items.filter(function(x){ return x.kind.indexOf('협찬')  >= 0 && x.tot > 0; });
-  const 합 = function(a){ return a.reduce(function(s,x){ return s + x.tot; }, 0); };
+  const 리퍼브 = items.filter(function(x){ return String(x.kind).indexOf('리퍼브')>=0 && x.tot>0; });
+  const 협찬  = items.filter(function(x){ return String(x.kind).indexOf('협찬')>=0  && x.tot>0; });
 
   if(!정상.length){
-    V.setHTML('prodBody', '<div class="box-note">제품 데이터가 없습니다.</div>');
+    setHTML('prodBody','<div class="note">제품 데이터가 없습니다.</div>');
     return;
   }
 
-  let h = '<div class="box-ok">정상품 '+정상.length+'종 · 총 <b>'+n(합(정상))+'개</b></div>';
+  let h = '<div class="summary"><span class="big">'+n(합(정상))+'</span>'+
+    '<span class="lb">개 · 정상품 '+정상.length+'종</span></div>';
 
   /* 디자인별 묶음 — 원본 순서를 따른다 */
-  const groups = [];
+  const groups=[];
   정상.forEach(function(x){
     const d = 디자인명(x.name);
-    let g = null;
+    let g=null;
     for(let i=0;i<groups.length;i++){ if(groups[i].name===d){ g=groups[i]; break; } }
-    if(!g){ g = { name:d, rows:[] }; groups.push(g); }
+    if(!g){ g={name:d,rows:[]}; groups.push(g); }
     g.rows.push(x);
   });
   groups.forEach(function(g){
-    h += '<div class="sec s-blu">'+esc(g.name)+' · '+n(합(g.rows))+'개</div>' + 제품표(g.rows, false);
+    h += '<div class="sec">'+esc(g.name)+'<span class="cnt">'+n(합(g.rows))+'개</span></div>'+
+      제품표(g.rows,false);
   });
 
   /* 품절 알림 — 정상품 아래, 리퍼브 위 */
-  const 품절 = 정상.filter(function(x){ return x.tot <= 0; });
+  const 품절 = 정상.filter(function(x){ return x.tot<=0; });
   if(품절.length){
-    h += '<div class="box-note">🔴 <b>품절 '+품절.length+'종</b><br>'+
-      품절.map(function(x){ return esc(디자인명(x.name)+' · '+(x.opt||'')); }).join('<br>')+
-      '</div>';
+    h += '<div class="box danger"><div class="hd"><span class="dot danger"></span>'+
+      '품절 '+품절.length+'종</div>'+
+      품절.map(function(x){ return esc(디자인명(x.name)+' · '+(x.opt||'')); }).join('<br>')+'</div>';
   }
 
-  if(리퍼브.length) h += '<details><summary>리퍼브 제품 · '+n(합(리퍼브))+'개</summary>'+제품표(리퍼브, true)+'</details>';
-  if(협찬.length)   h += '<details><summary>협찬 제품 · '+n(합(협찬))+'개</summary>'+제품표(협찬, true)+'</details>';
+  if(리퍼브.length) h += 접기('리퍼브 제품', n(합(리퍼브))+'개', 제품표(리퍼브,true));
+  if(협찬.length)   h += 접기('협찬 제품',   n(합(협찬))+'개',   제품표(협찬,true));
 
-  h += '<div class="sub2" style="line-height:1.7">· 재고관리_메인 시트를 그대로 읽습니다. 앱에서는 수정할 수 없습니다.<br>'+
+  h += '<div class="foot-note">· 재고관리_메인 시트를 그대로 읽습니다. 앱에서는 수정할 수 없습니다.<br>'+
        '· 창고는 자사 보관, 풀필은 위탁 보관 수량입니다.<br>'+
        '· 리퍼브·협찬은 재고가 있는 것만 표시합니다.</div>';
-  V.setHTML('prodBody', h);
+  setHTML('prodBody', h);
 }
 
-/* ── 부자재 재고 ──────────────────────── */
-/* 발주 알림을 띄우지 않는 분류.
-   원단은 생산할 때마다 발주하는 물건이라 재고 0이 정상 상태다.
-   신호등을 그대로 두면 매번 🔴 이 떠서 정작 봐야 할 품목이 묻힌다. */
-const NO_ALERT = ['원단'];
-
-/* 분류 구획. 새 분류가 생겨도 아래 CATS 에 한 줄 더하면 된다. */
-const CATS = [
-  { k:'생산', t:'🔵 생산 부자재', c:'s-blu' },
-  { k:'출고', t:'🟢 출고 부자재', c:'s-grn' },
-  { k:'원단', t:'🟤 원단',        c:'s-brn' }
-];
-
-function renderStock(D){
-  let h = '';
+/* ── 부자재 재고 ──────────────────────────────────── */
+function renderMaterials(){
+  const D = DATA; if(!D) return;
+  const mats = D.materials || [];
+  let h='';
   CATS.forEach(function(o){
-    h += section(D, o.t, o.c, D.materials.filter(function(m){ return m.cat === o.k; }));
+    h += 구획(o, mats.filter(function(m){ return m.cat===o.k; }));
   });
   /* 분류가 비었거나 목록에 없는 값이면 조용히 사라지지 않도록 따로 모은다 */
-  const rest = D.materials.filter(function(m){
-    return !CATS.some(function(o){ return o.k === m.cat; });
+  const rest = mats.filter(function(m){
+    return !CATS.some(function(o){ return o.k===m.cat; });
   });
-  if(rest.length) h += section(D, '⚪ 분류 미지정','s-gry',rest);
+  if(rest.length) h += 구획({t:'분류 미지정',dot:'mute'}, rest);
 
-  V.setHTML('stockBody', h + 발주알림(D) + note(D));
+  setHTML('matBody', h + 발주알림() + 수량안내());
 }
 
-function section(D, title, cls, list){
+function 구획(o, list){
   if(!list.length) return '';
   const rows = list.map(function(m){
-    const id = 'ven_' + String(m.code).replace(/[^A-Za-z0-9가-힣_-]/g,'_');
+    const id = 'ven_'+String(m.code).replace(/[^A-Za-z0-9]/g,'_');
     const cell = m.sup
-      ? '<span class="lnk" onclick="VERDAN.toggleBox(\''+jsq(id)+'\')">'+esc(m.sup)+'</span>'
-      : '<span class="sub2">—</span>';
-    return '<tr>'+
-      '<td><b>'+esc(m.name)+'</b><div class="sub2">'+esc(m.code)+'</div></td>'+
-      '<td class="num">'+n(m.stock)+'</td>'+
-      '<td class="ctr" style="font-size:12px">'+cell+'</td></tr>'+
-      '<tr id="'+esc(id)+'" style="display:none"><td colspan="3" class="vd">'+venCard(D,m)+'</td></tr>';
+      ? '<span class="lnk" onclick="toggleVen(\''+esc(id)+'\')">'+esc(m.sup)+'</span>'
+      : '<span class="muted">—</span>';
+    const stock = num(m.stock);
+    return '<tr><td><span class="nm">'+esc(m.name)+'</span>'+
+        '<div class="sub2">'+esc(m.code)+'</div></td>'+
+      '<td>'+(stock===null ? '<span class="muted">미확인</span>' : n(stock))+'</td>'+
+      '<td>'+cell+'</td></tr>'+
+      '<tr id="'+esc(id)+'" style="display:none"><td colspan="3" class="vd">'+거래처(m)+'</td></tr>';
   }).join('');
-  return '<div class="sec '+cls+'">'+title+'</div><div class="tbl-wrap"><table>'+
-    '<thead><tr><th style="text-align:left">부자재</th><th>수량</th><th>거래처</th></tr></thead>'+
+  return '<div class="sec"><span class="dot '+o.dot+'"></span>'+esc(o.t)+
+    '<span class="cnt">'+list.length+'종</span></div>'+
+    '<div class="tbl"><table><thead><tr><th>부자재</th><th>수량</th><th>거래처</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table></div>';
 }
 
-function venCard(D, m){
-  const v = (D.vendors || []).filter(function(x){ return x.vcode === m.vcode; })[0];
+function 거래처(m){
+  const v = (DATA.vendors||[]).filter(function(x){ return x.vcode===m.vcode; })[0];
   if(!v) return '<span class="sub2">거래처마스터에 '+esc(m.vcode||'코드 없음')+' 정보가 없습니다.</span>';
 
   /* 담당자 · 연락처 → 홍길동 / 010-0000-0000 */
-  const who = [];
+  const who=[];
   if(v.person) who.push(esc(v.person));
   if(v.tel) who.push('<a href="tel:'+esc(String(v.tel).replace(/[^0-9+]/g,''))+'">'+esc(v.tel)+'</a>');
-
   /* MOQ · 단가 → 1,000 / 8원 */
-  const buy = [];
+  const buy=[];
   if(num(m.moq))   buy.push(n(m.moq));
   if(num(m.price)) buy.push(n(m.price)+'원');
 
-  return '<div><b>거래처코드</b> '+esc(v.vcode)+'</div>'+
-    '<div><b>거래처명</b> '+esc(v.name)+'</div>'+
-    '<div><b>상세스펙</b> '+(m.spec ? esc(m.spec)
-      : '<span class="danger">미등록 — 공급품목 시트에 입력하세요</span>')+'</div>'+
-    '<div><b>담당자 · 연락처</b> '+(who.length ? who.join(' / ') : '—')+'</div>'+
-    '<div><b>URL</b> '+(v.url
-      ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크 열기</a>' : '—')+'</div>'+
-    '<div><b>MOQ · 단가</b> '+(buy.length ? buy.join(' / ') : '—')+'</div>'+
-    '<div><b>리드타임</b> '+(num(m.lead) ? n(m.lead)+'일' : '—')+'</div>'+
-    '<div><b>발주 방법</b> '+(m.method ? esc(m.method) : '—')+'</div>';
+  const r = function(k,val){ return '<div class="k">'+k+'</div><div>'+val+'</div>'; };
+  return '<div class="row">'+
+    r('거래처코드', esc(v.vcode))+
+    r('거래처명',   esc(v.name))+
+    r('상세스펙',   m.spec ? esc(m.spec)
+      : '<span class="dg">미등록 — 공급품목 시트에 입력하세요</span>')+
+    r('담당자·연락처', who.length ? who.join(' / ') : '—')+
+    r('URL', v.url ? '<a href="'+esc(v.url)+'" target="_blank" rel="noopener">링크 열기</a>' : '—')+
+    r('MOQ · 단가', buy.length ? buy.join(' / ') : '—')+
+    r('리드타임', num(m.lead) ? n(m.lead)+'일' : '—')+
+    r('발주 방법', m.method ? esc(m.method) : '—')+
+    '</div>';
+}
+function toggleVen(id){
+  const el=$(id);
+  if(el) el.style.display = (el.style.display==='none') ? 'table-row' : 'none';
 }
 
-/* 신호등 열을 뺐으므로, 발주가 필요한 것만 따로 알린다 */
-function 발주알림(D){
-  const need = D.materials.filter(function(m){
-    if(NO_ALERT.indexOf(m.cat) >= 0) return false;
-    return m.state && m.state.indexOf('🔴') >= 0;
+/* 표에서 신호등 열을 뺐으므로, 발주가 필요한 것만 따로 알립니다 */
+function 발주알림(){
+  const need = (DATA.materials||[]).filter(function(m){
+    if(NO_ALERT.indexOf(m.cat)>=0) return false;
+    return m.state && String(m.state).indexOf('🔴')>=0;
   });
   if(!need.length) return '';
-  return '<div class="box-danger"><b style="color:var(--v-danger)">🔴 발주 필요 '+need.length+'종</b><br>'+
+  return '<div class="box danger"><div class="hd"><span class="dot danger"></span>'+
+    '발주 필요 '+need.length+'종</div>'+
     need.map(function(m){ return esc(m.name)+(m.sup ? ' · '+esc(m.sup) : ''); }).join('<br>')+
     '</div>';
 }
 
-function note(D){
-  const un = D.materials.filter(function(m){ return m.fix==='미확인'; });
-  const js = D.materials.filter(function(m){ return m.fix==='잠정'; });
-  let h = '';
-  if(un.length) h += '<div class="box-note">⚪ <b>수량 미확인</b> — '+
-      un.map(function(m){ return esc(m.name); }).join(', ')+
-      '<br>확인 후 시트의 기초재고·기준일·재고확정을 채우세요.</div>';
-  if(js.length) h += '<div class="box-note">🟠 <b>잠정 수량</b> — '+
-      js.map(function(m){ return esc(m.name); }).join(', ')+' · 실사 후 [확정]으로 변경하세요.</div>';
+function 수량안내(){
+  const mats = DATA.materials||[];
+  const un = mats.filter(function(m){ return m.fix==='미확인'; });
+  const js = mats.filter(function(m){ return m.fix==='잠정'; });
+  let h='';
+  if(un.length) h += '<div class="box note"><div class="hd"><span class="dot mute"></span>'+
+    '수량 미확인</div>'+un.map(function(m){ return esc(m.name); }).join(', ')+
+    '<br>확인 후 시트의 기초재고·기준일·재고확정을 채우세요.</div>';
+  if(js.length) h += '<div class="box note"><div class="hd"><span class="dot warn"></span>'+
+    '잠정 수량</div>'+js.map(function(m){ return esc(m.name); }).join(', ')+
+    ' · 실사 후 [확정]으로 변경하세요.</div>';
   return h;
 }
 
-/* ── 생산 계산 ────────────────────────── */
+/* ── 생산 계산 ────────────────────────────────────── */
 function calc(){
-  const D = V.data();
-  if(!D) return;
-  const dcode = document.getElementById('cDesign').value;
-  const qty   = parseInt(document.getElementById('cQty').value, 10);
+  const D = DATA; if(!D) return;
+  const dcode = $('cDesign').value;
+  const qty = parseInt($('cQty').value,10);
   if(!dcode || !qty || qty<=0){
-    V.setHTML('calcBody','<div class="box-note">제품과 생산 수량을 입력하세요.</div>'); return;
+    setHTML('calcBody','<div class="box note">제품과 생산 수량을 입력하세요.</div>'); return;
+  }
+  const lines = (D.bom||[]).filter(function(b){ return b.dcode===dcode; });
+  if(!lines.length){
+    setHTML('calcBody','<div class="box note">이 제품의 BOM이 없습니다.</div>'); return;
   }
 
-  const lines = D.bom.filter(function(b){ return b.dcode===dcode; });
-  if(!lines.length){ V.setHTML('calcBody','<div class="box-note">이 제품의 BOM이 없습니다.</div>'); return; }
-
   const items = lines.map(function(b){
-    const m = D.materials.filter(function(x){ return x.code===b.code; })[0] || {};
+    const m = (D.materials||[]).filter(function(x){ return x.code===b.code; })[0] || {};
     const need  = Math.ceil((b.real || b.qty) * qty);
     const stock = num(m.stock);
-    const rem   = stock===null ? null : stock - need;
+    const rem   = stock===null ? null : stock-need;
     const mon   = num(m.monthly) || 0;
     const moq   = num(m.moq) || 1;
     /* 잔여가 3개월치에 못 미치면 그 부족분만 MOQ 단위로 올림 (이중 가산 없음) */
-    const target= mon * 3;
-    const lack  = (rem===null) ? null : Math.max(0, target - rem);
+    const lack  = (rem===null) ? null : Math.max(0, mon*3 - rem);
     const order = (lack && lack>0) ? Math.ceil(lack/moq)*moq : 0;
     return { b:b, m:m, need:need, stock:stock, rem:rem, mon:mon, order:order,
-             remMos: (rem===null||mon===0) ? null : Math.round(rem/mon*10)/10 };
+      remMos:(rem===null||mon===0) ? null : Math.round(rem/mon*10)/10 };
   });
 
   const rows = items.map(function(it){
-    let st, cls='';
-    if(it.rem===null){ st='⚪ 미확인'; }
-    else if(it.rem < 0){ st='🔴 부족'; cls='danger'; }
-    else if(it.mon===0){ st='⚪ 소요 미상'; }
-    else if(it.remMos < 3){ st='🔴 발주 필요'; cls='danger'; }
-    else if(it.remMos < 12){ st='🟢 정상'; cls='ok'; }
-    else if(it.remMos < 24){ st='🟡 여유'; cls='warn'; }
-    else { st='🟣 과잉'; }
-    return '<tr>'+
-      '<td><b>'+esc(it.b.name)+'</b><div class="sub2">'+esc(it.b.owner)+
+    let st, dot, cls='';
+    if(it.rem===null){ st='미확인'; dot='mute'; }
+    else if(it.rem<0){ st='부족'; dot='danger'; cls='dg'; }
+    else if(it.mon===0){ st='소요 미상'; dot='mute'; }
+    else if(it.remMos<3){ st='발주 필요'; dot='danger'; cls='dg'; }
+    else if(it.remMos<12){ st='정상'; dot='ok'; }
+    else if(it.remMos<24){ st='여유'; dot='warn'; }
+    else { st='과잉'; dot='d3'; }
+    return '<tr><td><span class="nm">'+esc(it.b.name)+'</span>'+
+      '<div class="sub2">'+esc(it.b.owner)+
         (it.b.defect>0 ? ' · 불량 '+Math.round(it.b.defect*100)+'%' : '')+'</div></td>'+
-      '<td class="num">'+n(it.stock)+'</td>'+
-      '<td class="num">'+n(it.need)+'</td>'+
-      '<td class="num '+cls+'">'+n(it.rem)+'</td>'+
-      '<td class="ctr" style="font-size:12px">'+st+'</td></tr>';
+      '<td>'+n(it.stock)+'</td><td>'+n(it.need)+'</td>'+
+      '<td class="'+cls+'">'+n(it.rem)+'</td>'+
+      '<td style="white-space:nowrap"><span class="dot '+dot+'" style="margin-right:5px"></span>'+
+        '<span style="font-size:11.5px">'+st+'</span></td></tr>';
   }).join('');
 
   const short = items.filter(function(it){ return it.order>0 || (it.rem!==null && it.rem<0); });
-  let alertHtml = '';
+  let alertHtml;
   if(short.length){
-    alertHtml = '<div class="box-danger"><b style="color:var(--v-danger)">🔴 발주 검토 ('+short.length+'종)</b><br><br>'+
+    alertHtml = '<div class="box danger"><div class="hd"><span class="dot danger"></span>'+
+      '발주 검토 '+short.length+'종</div>'+
       short.map(function(it){
         const price = num(it.m.price);
-        let line = '▸ <b>'+esc(it.b.name)+'</b><br>'+
-          '생산 후 잔여 <b class="danger">'+n(it.rem)+'개</b>'+
+        return '<div style="margin-top:10px"><b>'+esc(it.b.name)+'</b><br>'+
+          '생산 후 잔여 '+n(it.rem)+'개'+
           (it.remMos!==null ? ' (약 '+it.remMos+'개월치)' : '')+'<br>'+
-          '권장 발주 <b>'+n(it.order)+'개</b> · MOQ '+n(it.m.moq)+
-          (it.m.sup ? ' · '+esc(it.m.sup) : '')+'<br>';
-        line += '<span class="sub2">' +
-          (price ? '예상 '+n(it.order*price)+'원 · ' : '') +
-          '리드타임 '+n(it.m.lead)+'일</span>';
-        return line;
-      }).join('<br><br>')+'</div>';
-  } else {
-    alertHtml = '<div class="box-ok">🟢 생산 후에도 3개월치 이상 남습니다. 발주 불필요.</div>';
+          '권장 발주 '+n(it.order)+'개 · MOQ '+n(it.m.moq)+
+          (it.m.sup ? ' · '+esc(it.m.sup) : '')+'<br>'+
+          '<span style="opacity:.75">'+
+          (price ? '예상 '+n(it.order*price)+'원 · ' : '')+
+          '리드타임 '+n(it.m.lead)+'일</span></div>';
+      }).join('')+'</div>';
+  }else{
+    alertHtml = '<div class="box ok"><div class="hd"><span class="dot ok"></span>'+
+      '생산 후에도 3개월치 이상 남습니다</div>발주가 필요하지 않습니다.</div>';
   }
 
   const un = items.filter(function(it){ return it.rem===null; });
-  const unNote = un.length ? '<div class="box-note">⚪ '+
+  const unNote = un.length ? '<div class="box note"><div class="hd">'+
+    '<span class="dot mute"></span>재고 미확인</div>'+
     un.map(function(it){ return esc(it.b.name); }).join(', ')+
-    ' 는 재고 미확인이라 계산에서 빠졌습니다.</div>' : '';
+    ' 는 계산에서 빠졌습니다.</div>' : '';
 
-  V.setHTML('calcBody',
-    '<div class="tbl-wrap"><table><thead><tr>'+
-    '<th style="text-align:left">부자재</th><th>현재고</th><th>필요</th><th>잔여</th><th>상태</th>'+
-    '</tr></thead><tbody>'+rows+'</tbody></table></div>' + alertHtml + unNote +
-    '<div class="sub2" style="line-height:1.7">· 필요 수량은 BOM 실소요량(불량률 포함) × 생산 수량입니다.<br>'+
+  setHTML('calcBody',
+    '<div class="tbl"><table><thead><tr><th>부자재</th><th>현재고</th><th>필요</th>'+
+    '<th>잔여</th><th style="text-align:left">상태</th></tr></thead><tbody>'+rows+
+    '</tbody></table></div>'+alertHtml+unNote+
+    '<div class="foot-note">· 필요 수량은 BOM 실소요량(불량률 포함) × 생산 수량입니다.<br>'+
     '· 발주 권장은 생산 후 잔여가 3개월치에 못 미칠 때만 계산됩니다.</div>');
 }
 
-/* ── 입출고 등록 ──────────────────────── */
+/* ── 입출고 등록 ──────────────────────────────────── */
 async function submitLog(){
-  if(V.isBusy()) return;
+  if(BUSY) return;
   const p = {
     action:'log',
-    code:   document.getElementById('fCode').value,
-    kind:   document.getElementById('fKind').value,
-    reason: document.getElementById('fReason').value,
-    qty:    document.getElementById('fQty').value,
-    ref:    document.getElementById('fRef').value,
-    memo:   document.getElementById('fMemo').value
+    code:   $('fCode').value,
+    kind:   $('fKind').value,
+    reason: $('fReason').value,
+    qty:    $('fQty').value,
+    ref:    $('fRef').value,
+    memo:   $('fMemo').value
   };
   if(!p.code || !p.kind || !p.reason || !p.qty){
     lm('부자재·구분·사유·수량을 모두 입력하세요.', true); return;
   }
-  const btn = document.getElementById('logBtn');
-  V.busy(true); btn.disabled = true; btn.textContent = '등록 중...';
+  const btn=$('logBtn');
+  BUSY=true; btn.disabled=true; btn.textContent='등록 중...';
   lm('등록 중...', false);
   try{
-    /* idem 을 주면 같은 내용으로 다시 눌러도 서버가 중복을 걸러낼 수 있다 */
-    const r = await V.api(p, { mode:'write', idem:'log:'+p.code+':'+p.kind+':'+p.qty+':'+p.ref });
-    if(!r.ok){ lm(r.msg || '등록에 실패했습니다.', true); return; }
-    V.setData(r);
+    /* 같은 내용으로 다시 눌러도 서버가 중복을 걸러낼 수 있게 멱등키를 붙입니다 */
+    const r = await api(p, { mode:'write', idem:'log:'+p.code+':'+p.kind+':'+p.qty+':'+p.ref });
+    if(!r || !r.ok){ lm((r && r.msg) || '등록에 실패했습니다.', true); return; }
+    setData(r);
     lm('등록했습니다.', false);
-    ['fQty','fRef','fMemo'].forEach(function(id){ V.setVal(id,''); });
-    /* 방금 남긴 기록이 접근로그에 반영되도록 다시 불러온다.
-       열람 권한이 없는 담당자는 부를 필요가 없다(서버가 거부한다). */
-    if(V.can('access')) V.loadLogs(true).catch(function(){});
-    setTimeout(function(){ V.tab('p1'); lm('',false); }, 900);
+    ['fQty','fRef','fMemo'].forEach(function(id){ setVal(id,''); });
+    /* 방금 남긴 기록이 접근로그에 반영되도록 다시 불러옵니다.
+       열람 권한이 없는 담당자는 부를 필요가 없습니다(서버가 거부합니다). */
+    if(can('access')) loadLogs(true).catch(function(){});
+    setTimeout(function(){ NAV='home'; go('p1'); paintBottom(); lm('',false); }, 900);
   }catch(e){
-    /* 시간 초과는 서버에 들어갔는지 알 수 없다. 중복 등록을 막기 위해
-       무조건 재시도하라고 하지 않고, 재고를 먼저 확인하도록 안내한다. */
-    lm(V.failMsg(e, '[재고] 탭에서 반영 여부를 먼저 확인하세요.'), true);
+    /* 시간 초과는 서버에 들어갔는지 알 수 없습니다. 중복 등록을 막기 위해
+       무조건 재시도하라고 하지 않고 재고를 먼저 확인하도록 안내합니다. */
+    lm(failMsg(e, '[재고] 탭에서 반영 여부를 먼저 확인하세요.'), true);
   }finally{
-    V.busy(false); btn.disabled = false; btn.textContent = '등록';
+    BUSY=false; btn.disabled=false; btn.textContent='등록';
+  }
+}
+function lm(t, err){
+  const el=$('logMsg'); if(!el) return;
+  el.textContent=t; el.className='msg'+(err?' err':' good');
+}
+
+/* ── 접근로그 (관리자) ────────────────────────────
+   분류(kind)는 서버가 붙여 보냅니다.
+     access : 로그인 성공 · 실패
+     work   : 입출고 등록 · 중복 확인 · 권한거부 · 오류
+     system : 자동 처리 → 화면에서 숨김
+   시각은 서버가 한국시간 'yyyy-MM-dd HH:mm' 로 맞춰 보냅니다. */
+async function loadLogs(force){
+  if(!can('access')) return;
+  if(logsLoaded && !force){ renderLogs(); return; }
+  setHTML('logBody','<div class="note">불러오는 중...</div>');
+  try{
+    const r = await api({ action:'access' });
+    if(!r || !r.ok){
+      setHTML('logBody','<div class="note err">'+esc((r&&r.msg)||'불러오지 못했습니다.')+'</div>');
+      return;
+    }
+    LOGS = (r.logs||[]).filter(function(x){ return x.kind!=='system'; });
+    logsLoaded = true;
+    renderLogs();
+  }catch(e){
+    setHTML('logBody','<div class="note err">'+esc(failMsg(e,''))+'</div>');
   }
 }
 
-function lm(t, err){
-  const el = document.getElementById('logMsg');
-  if(!el) return;
-  el.textContent = t; el.className = 'msg' + (err ? ' err' : ' good');
+function renderLogs(){
+  if(!can('access')) return;
+  const rows = LOGS.filter(function(x){ return x.kind===LOGVIEW; });
+  if(!rows.length){
+    setHTML('logBody','<div class="note">'+
+      (LOGVIEW==='access' ? '접속 기록이 없습니다.' : '기록이 없습니다.')+'</div>');
+    return;
+  }
+  setHTML('logBody', rows.map(function(r){
+    const tail = (LOGVIEW==='access')
+      ? (r.role || '')
+      : (r.memo || '');
+    return '<div class="log-r"><div class="l1"><b>'+esc(r.user||'—')+'</b>'+
+      '<span class="t">'+esc(r.t||'')+'</span></div>'+
+      '<div class="l2">'+esc(r.result||'')+(tail ? ' · '+esc(tail) : '')+'</div></div>';
+  }).join(''));
 }
 
-/* ── 접근로그 (관리자) ──────────────────
-   탭(접속 · 기록)과 표는 코어가 그린다.
-     접속 = 로그인 성공 · 실패
-     기록 = 입출고 등록 · 중복 요청 확인 · 권한거부
-   시각은 서버가 한국시간 'yyyy-MM-dd HH:mm' 로 맞춰 보낸다.
-   이 앱에서 따로 할 일은 없다. 새로고침 버튼이 V.loadLogs(true) 를 부른다. */
+/* ── 워터마크 ─────────────────────────────────────── */
+function watermark(){
+  const e=$('wm');
+  if(!PW || !USER){ e.style.display='none'; e.innerHTML=''; return; }
+  const d=new Date(), p=function(x){ return String(x).padStart(2,'0'); };
+  const txt = USER+' · '+d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+
+    ' '+p(d.getHours())+':'+p(d.getMinutes());
+  let h='';
+  for(let y=-120;y<window.innerHeight+200;y+=130)
+    for(let x=-180;x<window.innerWidth+240;x+=210)
+      h += '<span style="left:'+x+'px;top:'+y+'px">'+esc(txt)+'</span>';
+  e.innerHTML=h; e.style.display='block';
+}
 </script>
 </body>
 </html>
