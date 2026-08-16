@@ -21,7 +21,7 @@
 
 <style>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.5   (버던_재고 API v3.6)
+   버던_재고 v6.6   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -529,7 +529,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.5
+   버던_재고 v6.6
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -537,7 +537,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.5';
+const APP_VER  = 'v6.6';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -919,11 +919,26 @@ function measure(){
   fitBottom();
 }
 
-/* 하단 내비 아래 여백은 12px 로 고정합니다.
-   env(safe-area-inset-bottom) 을 그대로 쓰면, 기기가 알려주는 값이
-   상황마다 달라져 내비 높이가 왔다갔다 합니다. */
+/* 하단 내비 아래 여백.
+   화면 아래에 앱 바깥으로 남는 자리(gap)가 이미 홈 인디케이터를 덮으므로
+   그만큼 덜어냅니다. 안 그러면 흰 영역이 120px 까지 두꺼워집니다.
+   기기가 주는 값이 흔들려도 내비 높이가 변하지 않도록 시작할 때 한 번만 잽니다. */
+let NAVPAD = null;
 function fitBottom(){
-  document.documentElement.style.setProperty('--navpad', '12px');
+  if(NAVPAD !== null) return;
+  let safe = 0;
+  try{
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:fixed;bottom:0;left:0;width:1px;visibility:hidden;'+
+      'pointer-events:none;height:env(safe-area-inset-bottom)';
+    document.body.appendChild(probe);
+    safe = probe.offsetHeight;
+    probe.remove();
+  }catch(e){}
+  const scr = (window.screen && window.screen.height) ? window.screen.height : window.innerHeight;
+  const gap = Math.max(0, scr - (window.innerHeight || scr));
+  NAVPAD = Math.min(Math.max(safe - gap, 4), 34);
+  document.documentElement.style.setProperty('--navpad', NAVPAD + 'px');
 }
 window.addEventListener('resize', function(){ measure(); if(PW) watermark(); });
 function onScroll(e){
@@ -1104,9 +1119,10 @@ function 제품표(rows, 상품명표시){
     '<th>옵션</th><th>창고</th><th>풀필</th><th>총</th>'+
     '</tr></thead><tbody>'+body+'</tbody></table></div>';
 }
-function 접기(title, cnt, inner){
-  return '<details><summary><span class="chev">'+ic('chev',13)+'</span>'+esc(title)+
-    '<span class="cnt">'+esc(cnt)+'</span></summary>'+inner+'</details>';
+/* open=true 면 처음부터 펼쳐진 상태로 나옵니다. 눌러서 접을 수 있습니다. */
+function 접기(title, cnt, inner, open){
+  return '<details'+(open?' open':'')+'><summary><span class="chev">'+ic('chev',13)+'</span>'+
+    esc(title)+'<span class="cnt">'+esc(cnt)+'</span></summary>'+inner+'</details>';
 }
 
 function renderProducts(){
@@ -1144,9 +1160,9 @@ function renderProducts(){
     if(!g){ g={name:d,rows:[]}; groups.push(g); }
     g.rows.push(x);
   });
+  /* 디자인별로 접을 수 있게 합니다. 정상품은 펼친 상태로 시작합니다. */
   groups.forEach(function(g){
-    h += '<div class="sec">'+esc(g.name)+'<span class="cnt">'+n(합(g.rows))+'개</span></div>'+
-      제품표(g.rows,false);
+    h += 접기(g.name, n(합(g.rows))+'개', 제품표(g.rows,false), true);
   });
 
   /* 품절 알림 — 정상품 아래, 리퍼브 위 */
@@ -1158,8 +1174,9 @@ function renderProducts(){
       '</div></div>';
   }
 
-  if(리퍼브.length) h += 접기('리퍼브 제품', n(합(리퍼브))+'개', 제품표(리퍼브,true));
-  if(협찬.length)   h += 접기('협찬 제품',   n(합(협찬))+'개',   제품표(협찬,true));
+  /* 리퍼브·협찬은 접힌 상태로 시작합니다 */
+  if(리퍼브.length) h += 접기('리퍼브 제품', n(합(리퍼브))+'개', 제품표(리퍼브,true), false);
+  if(협찬.length)   h += 접기('협찬 제품',   n(합(협찬))+'개',   제품표(협찬,true), false);
 
   h += '<div class="foot-note">· 재고관리_메인 시트를 그대로 읽습니다. 앱에서는 수정할 수 없습니다.<br>'+
        '· 창고는 자사 보관, 풀필은 위탁 보관 수량입니다.<br>'+
