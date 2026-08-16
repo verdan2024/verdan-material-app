@@ -9,19 +9,19 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
      입력칸 글자는 16px 이라 자동 확대는 일어나지 않습니다. -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>버던_재고</title>
+<title>재고관리</title>
 
 <link rel="apple-touch-icon" href="https://verdan2024.github.io/verdan-core/apple-touch-icon.png">
 <link rel="icon" href="https://verdan2024.github.io/verdan-core/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="버던재고">
+<meta name="apple-mobile-web-app-title" content="재고관리">
 <meta name="theme-color" content="#30382A">
 
 <style>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.6   (버던_재고 API v3.6)
+   재고관리 v6.7   (버던_재고 API v3.6)
 
    ⚠️ 이 버전은 verdan-core 를 쓰지 않고 단독으로 동작합니다.
       새 UI 구조(스플래시 · 접히는 헤더 · 하단 내비 · 마이페이지 ·
@@ -359,10 +359,10 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
    env() 를 그대로 쓰면 같은 여백이 두 번 들어갑니다. */
 #bottom{flex-shrink:0;display:flex;background:var(--v-card);border-top:1px solid var(--v-line);
   padding-bottom:var(--navpad, 8px);z-index:40;}
-#bottom button{flex:1;border:none;background:none;font-family:inherit;padding:8px 0 7px;
-  display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--v-ph);}
+#bottom button{flex:1;border:none;background:none;font-family:inherit;padding:6px 0 4px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--v-ph);}
 #bottom button.on{color:var(--v-strong);}
-#bottom svg{width:22px;height:22px;}
+#bottom svg{width:21px;height:21px;}
 #bottom .lb{font-size:10px;font-weight:600;}
 
 /* ── 마이페이지 ───────────────────────────────────── */
@@ -399,6 +399,19 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* ── 워터마크 ─────────────────────────────────────
    캡쳐를 막을 수는 없으므로, 캡쳐된 이미지에 누가 언제 열었는지가
    함께 찍히도록 하는 장치입니다. */
+/* 확인창 */
+#dlg{position:fixed;inset:0;z-index:9500;display:none;align-items:center;justify-content:center;
+  background:rgba(20,22,17,.45);padding:32px;}
+#dlg.on{display:flex;}
+#dlg .box{background:var(--v-card);border-radius:16px;width:100%;max-width:300px;
+  padding:22px 20px 14px;box-shadow:0 10px 30px rgba(0,0,0,.18);}
+#dlg .msg{font-size:14.5px;font-weight:600;color:var(--v-txt);line-height:1.6;text-align:center;
+  margin:0 0 18px;}
+#dlg .btns{display:flex;gap:8px;}
+#dlg button{flex:1;padding:12px;border:none;border-radius:11px;font-family:inherit;
+  font-size:14px;font-weight:700;background:var(--v-cta);color:var(--v-cta-txt);}
+#dlg button.no{background:transparent;color:var(--v-mute);border:1px solid var(--v-line);}
+
 #wm{position:fixed;inset:0;pointer-events:none;z-index:9000;overflow:hidden;display:none;}
 #wm span{position:absolute;white-space:nowrap;font-size:13px;font-weight:700;
   color:var(--v-wm);opacity:var(--wm-op);transform:rotate(-30deg);}
@@ -415,7 +428,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 <!-- 로그인 · 입력 순서는 이름 → 비밀번호 -->
 <div id="gate">
   <img class="logo" id="gateLogo" alt="VERDAN">
-  <div class="sub">버던_재고</div>
+  <div class="sub">재고관리</div>
   <input type="text" id="nm" placeholder="이름" autocomplete="name" maxlength="20">
   <input type="password" id="pw" placeholder="비밀번호" autocomplete="current-password">
   <button id="loginBtn">로그인</button>
@@ -430,7 +443,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
     <div id="header">
       <div>
         <button id="brandBtn"><img class="logo" id="headLogo" alt="VERDAN"><span class="chev"></span></button>
-        <div class="app">버던_재고</div>
+        <div class="app">재고관리</div>
       </div>
       <div class="rt">
         <button id="rfBtn">새로고침</button>
@@ -525,11 +538,22 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
   </div>
 </div>
 
+<!-- 확인창 · iOS 기본 confirm 은 버튼이 파란색으로 고정이라 직접 만듭니다 -->
+<div id="dlg">
+  <div class="box">
+    <div class="msg" id="dlgMsg"></div>
+    <div class="btns">
+      <button id="dlgNo" class="no">취소</button>
+      <button id="dlgYes">확인</button>
+    </div>
+  </div>
+</div>
+
 <div id="wm" aria-hidden="true"></div>
 
 <script>
 /* ══════════════════════════════════════════════════════
-   버던_재고 v6.6
+   재고관리 v6.7
    서버(Apps Script)와 주고받는 규격은 v5.1 과 같습니다.
    바뀐 것은 화면뿐입니다.
    ══════════════════════════════════════════════════════ */
@@ -537,7 +561,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* Apps Script 웹앱 URL. 재배포해서 URL 이 바뀌면 이 줄만 고치면 된다. */
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwSpg7_qMtWB-5TRqETUGHmic_be-bf-sUesKwekm0G8Lg6Q7uzyNmgcb8OW9JU8Zv-/exec";
 
-const APP_VER  = 'v6.6';
+const APP_VER  = 'v6.7';
 /* 로고 · 공통 코어 저장소에 둡니다. 3개 앱이 같은 주소를 봅니다.
    로고를 바꾸면 ?v= 숫자만 올리면 캐시가 갈립니다. */
 const LOGO = {
@@ -768,7 +792,7 @@ setTimeout(function(){
 }, 1000);
 
 $('verLine').textContent = APP_VER;
-$('verFoot').innerHTML = '버던_재고 '+APP_VER;
+$('verFoot').innerHTML = '재고관리 '+APP_VER;
 
 
 async function autoLogin(){
@@ -850,7 +874,7 @@ window.addEventListener('storage', function(e){
 function boot(){
   $('mpName').textContent = USER;
   $('mpRole').textContent = perm().label;
-  $('verFoot').innerHTML = '버던_재고 '+APP_VER;
+  $('verFoot').innerHTML = '재고관리 '+APP_VER;
   applyPerm();
   fillSelects();
   watermark();
@@ -937,7 +961,8 @@ function fitBottom(){
   }catch(e){}
   const scr = (window.screen && window.screen.height) ? window.screen.height : window.innerHeight;
   const gap = Math.max(0, scr - (window.innerHeight || scr));
-  NAVPAD = Math.min(Math.max(safe - gap, 4), 34);
+  /* 바깥 자리가 이미 홈 인디케이터를 덮으면 안쪽 여백은 없어도 됩니다 */
+  NAVPAD = Math.min(Math.max(safe - gap, 0), 34);
   document.documentElement.style.setProperty('--navpad', NAVPAD + 'px');
 }
 window.addEventListener('resize', function(){ measure(); if(PW) watermark(); });
@@ -1062,8 +1087,11 @@ function bindAll(){
   $('calcBtn').addEventListener('click', calc);
   $('logBtn').addEventListener('click', submitLog);
   $('outBtn').addEventListener('click', function(){
-    if(confirm('로그아웃할까요?')) logout();
+    askConfirm('로그아웃할까요?', logout);
   });
+  $('dlgYes').addEventListener('click', function(){ closeDlg(true); });
+  $('dlgNo').addEventListener('click', function(){ closeDlg(false); });
+  $('dlg').addEventListener('click', function(e){ if(e.target===this) closeDlg(false); });
   $('cDesign').addEventListener('change', function(){
     this.className = this.value ? '' : 'ph';
   });
@@ -1099,6 +1127,20 @@ function opt(id, ph, items){
     items.map(function(i){ return '<option value="'+esc(i.v)+'">'+esc(i.t)+'</option>'; }).join(''));
 }
 
+/* ── 확인창 ───────────────────────────────────────
+   iOS 기본 confirm 은 버튼 색이 파랑으로 고정되어 브랜드 색과 어긋납니다. */
+let DLG_CB = null;
+function askConfirm(msg, onYes){
+  $('dlgMsg').textContent = msg;
+  DLG_CB = onYes;
+  $('dlg').classList.add('on');
+}
+function closeDlg(yes){
+  $('dlg').classList.remove('on');
+  const f = DLG_CB; DLG_CB = null;
+  if(yes && f) f();
+}
+
 /* ── 제품 재고 (조회 전용) ────────────────────────── */
 function 디자인명(name){
   const s = String(name).replace(/^\[[^\]]*\]\s*/, '');   /* [REFURB] · [협찬] 제거 */
@@ -1116,7 +1158,7 @@ function 제품표(rows, 상품명표시){
       '<td class="'+(zero?'dg':'')+'">'+(zero ? '품절' : n(x.tot))+'</td></tr>';
   }).join('');
   return '<div class="tbl"><table><thead><tr>'+
-    '<th>옵션</th><th>창고</th><th>풀필</th><th>총</th>'+
+    '<th>옵션</th><th>창고</th><th>3PL</th><th>총</th>'+
     '</tr></thead><tbody>'+body+'</tbody></table></div>';
 }
 /* open=true 면 처음부터 펼쳐진 상태로 나옵니다. 눌러서 접을 수 있습니다. */
@@ -1179,7 +1221,7 @@ function renderProducts(){
   if(협찬.length)   h += 접기('협찬 제품',   n(합(협찬))+'개',   제품표(협찬,true), false);
 
   h += '<div class="foot-note">· 재고관리_메인 시트를 그대로 읽습니다. 앱에서는 수정할 수 없습니다.<br>'+
-       '· 창고는 자사 보관, 풀필은 위탁 보관 수량입니다.<br>'+
+       '· 창고는 자사 보관, 3PL은 위탁 보관 수량입니다.<br>'+
        '· 리퍼브·협찬은 재고가 있는 것만 표시합니다.</div>';
   setHTML('prodBody', h);
 }
