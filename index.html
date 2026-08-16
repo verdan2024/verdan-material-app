@@ -114,7 +114,10 @@
    바깥(문서)은 스크롤되지 않게 잠그고 안쪽 판(.page)만 스크롤합니다.
    문서 전체가 스크롤되면 iOS 에서 고무줄 반동이 생기고 주소창이
    오르내리며 화면 높이가 계속 바뀌어 헤더·탭이 흔들립니다. */
-html{height:100%;overflow:hidden;}
+/* 스플래시가 걷히기 전까지는 문서 바탕도 올리브로 둡니다.
+   안 그러면 화면 맨 아래(홈 인디케이터 쪽)에 밝은 띠가 남습니다. */
+html{height:100%;overflow:hidden;background:#30382A;}
+html.ready{background:var(--v-bg);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
   position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;
@@ -123,7 +126,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
   transition:background-color .25s var(--ease),color .25s var(--ease);}
 
 /* ── 스플래시 ────────────────────────────────────── */
-#splash{position:fixed;inset:0;z-index:99999;background:#30382A;
+#splash{position:fixed;inset:0;min-height:100dvh;z-index:99999;background:#30382A;
   display:flex;align-items:center;justify-content:center;
   transition:opacity .45s var(--ease);}
 #splash.gone{opacity:0;pointer-events:none;}
@@ -626,33 +629,17 @@ function failMsg(e, tail){
 }
 
 /* ── 스플래시 → 로그인 또는 자동 로그인 ───────────── */
+function ready(){ document.documentElement.classList.add('ready'); }
+
 setTimeout(function(){
   $('splash').classList.add('gone');
+  ready();
   setTimeout(function(){ $('splash').style.display='none'; }, 480);
 }, 1000);
 
 $('verLine').textContent = APP_VER;
 $('verFoot').innerHTML = '버던_재고 '+APP_VER;
 
-(function init(){
-  buildIcons(); buildCat(); buildBottom(); bindAll();
-  /* 기존 사용자가 다시 로그인하지 않도록 예전 저장 키도 본다 */
-  let saved = store(STORE.pw);
-  if(!saved){
-    for(let i=0;i<LEGACY.length;i++){
-      const v = store(LEGACY[i]);
-      if(v){ saved = v; store(STORE.pw, v); break; }
-    }
-  }
-  const savedUser = store(STORE.user) || '';
-  setVal('nm', savedUser);
-  if(saved){
-    PW = saved; USER = savedUser || '(미입력)';
-    autoLogin();
-  }else{
-    $('gate').classList.add('on');
-  }
-})();
 
 async function autoLogin(){
   try{
@@ -665,6 +652,11 @@ async function autoLogin(){
 }
 
 /* ── 로그인 ───────────────────────────────────────── */
+function showGate(){
+  $('gate').classList.add('on');
+  $('app').classList.remove('on');
+  ready();
+}
 function gmsg(t, wait){
   const el=$('gateMsg'); el.textContent=t; el.className = wait?'wait':'';
 }
@@ -1305,6 +1297,45 @@ function watermark(){
       h += '<span style="left:'+x+'px;top:'+y+'px">'+esc(txt)+'</span>';
   e.innerHTML=h; e.style.display='block';
 }
+
+/* ── 시작 ─────────────────────────────────────────
+   ⚠️ 이 블록은 반드시 스크립트 맨 끝에 있어야 합니다.
+      const 로 선언한 값(NAVS · LINKS 등)은 끌어올려지지 않아서,
+      위쪽에서 부르면 "Cannot access before initialization" 으로
+      파일이 통째로 죽습니다. 문법 검사로는 잡히지 않습니다. */
+(function init(){
+  try{
+    buildIcons(); buildCat(); buildBottom(); bindAll();
+
+    /* 기존 사용자가 다시 로그인하지 않도록 예전 저장 키도 본다 */
+    let saved = store(STORE.pw);
+    if(!saved){
+      for(let i=0;i<LEGACY.length;i++){
+        const v = store(LEGACY[i]);
+        if(v){ saved = v; store(STORE.pw, v); break; }
+      }
+    }
+    const savedUser = store(STORE.user) || '';
+    setVal('nm', savedUser);
+
+    if(saved){
+      PW = saved; USER = savedUser || '(미입력)';
+      autoLogin();
+    }else{
+      showGate();
+    }
+  }catch(e){
+    /* 무슨 일이 있어도 로그인 화면은 떠야 합니다.
+       빈 화면은 사용자가 손쓸 방법이 없습니다. */
+    showGate();
+    gmsg('화면을 여는 중 문제가 생겼습니다. ' + (e && e.message ? e.message : ''));
+  }
+})();
+
+/* 마지막 안전장치 — 3초가 지나도 아무 화면도 없으면 로그인 화면을 띄웁니다 */
+setTimeout(function(){
+  if(!$('gate').classList.contains('on') && !$('app').classList.contains('on')) showGate();
+}, 3000);
 </script>
 </body>
 </html>
