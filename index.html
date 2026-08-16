@@ -123,7 +123,7 @@
 /* 문서 바탕 — 스플래시 동안은 올리브, 그 뒤엔 하단 내비와 같은 색.
    화면 맨 아래에 몇 px 이 남더라도 눈에 띄지 않습니다. */
 html{height:100%;overflow:hidden;background:#30382A;}
-html.ready{background:var(--v-card);}
+html.ready{background:var(--v-bg);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
   /* ⚠️ 높이를 계산해서 넣지 않습니다.
@@ -213,8 +213,12 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
   background:#fff;border-radius:2px;}
 
 .page{display:none;padding:16px 16px 0;}
+/* 목록 끝 여백은 20px 이면 충분합니다.
+   예전에는 화면 맨 아래에 하단 내비가 없어서 여기서 안전영역(홈 인디케이터)
+   여백까지 떠안았습니다. 이제 그 몫은 #bottom 이 갖고 있으므로,
+   여기에 또 넣으면 목록 끝에 60px 넘는 빈 자리가 영구히 남습니다. */
 .page.on{display:block;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  overscroll-behavior:none;padding-bottom:calc(28px + env(safe-area-inset-bottom));}
+  overscroll-behavior:none;padding-bottom:20px;}
 
 /* ── 카테고리 — 위에서 내려오는 판 ─────────────────── */
 #catWrap{position:fixed;left:0;right:0;top:0;z-index:61;pointer-events:none;}
@@ -365,7 +369,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 .mp-blk{border-top:1px solid var(--v-line);padding:18px 2px 4px;}
 .mp-blk .ttl{font-size:11.5px;font-weight:700;color:var(--v-mute);margin-bottom:11px;}
 .ver{text-align:center;font-size:11px;color:var(--v-ph);padding:26px 0 16px;line-height:1.7;}
-#outBtn{margin-bottom:6px;}
+#outBtn{margin-bottom:4px;}
 
 .log-r{padding:12px 2px;border-top:1px solid var(--v-line);font-size:12.5px;}
 .log-r:first-child{border-top:none;}
