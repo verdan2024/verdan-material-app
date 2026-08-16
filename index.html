@@ -145,13 +145,12 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
   -webkit-text-size-adjust:100%;
   transition:background-color .25s var(--ease),color .25s var(--ease);}
 
-/* 키보드가 오르내릴 때 높이가 한 번에 툭 바뀌면 화면이 끊겨 보입니다.
-   iOS 키보드 애니메이션이 대략 0.25초라 그 길이에 맞춥니다.
-   ⚠️ 로그인 화면에서만 켭니다(JS 가 클래스를 붙였다 뗍니다).
-      본 화면은 안쪽 판이 스크롤 중일 때 높이가 늘어졌다 줄어들면
-      목록이 출렁이고 하단 내비가 따라 흔들립니다. */
-body.kb{transition:background-color .32s var(--ease),color .32s var(--ease),
-  height .32s var(--ease),transform .32s var(--ease);}
+/* ⚠️ height 에는 절대 transition 을 걸지 마세요.
+   높이는 바뀔 때마다 화면 전체를 다시 계산하게 만들고, iOS 는 키보드가
+   올라오는 동안 크기 변화를 여러 번 알려줍니다. 그때마다 전환이 처음부터
+   다시 시작되면서 계단처럼 툭툭 끊깁니다. 시간을 늘리면 더 나빠집니다.
+   대신 로그인 화면에서는 높이를 그대로 두고 #gateIn 만 transform 으로
+   밀어 올립니다. transform 은 레이아웃을 건드리지 않습니다. */
 
 /* ── 스플래시 ────────────────────────────────────── */
 #splash{position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#30382A;
@@ -172,6 +171,9 @@ body.kb{transition:background-color .32s var(--ease),color .32s var(--ease),
       자리가 없으면 스스로 0 이 됩니다. */
 #gate::before{content:'';flex:1.4 1 0;min-height:0;}
 #gate::after {content:'';flex:1 1 0;min-height:0;}
+/* 키보드가 올라올 때 이 덩어리만 위로 미끄러집니다.
+   움직이는 것이 transform 하나뿐이라 레이아웃 계산이 없습니다. */
+#gateIn{flex-shrink:0;transition:transform .26s var(--ease);}
 #gate .logo{width:140px;height:auto;display:block;margin-bottom:14px;}
 #gate .sub{font-size:13px;color:var(--v-mute);margin-bottom:26px;margin-left:3px;}
 #gate input{width:100%;padding:15px 16px;border:1px solid var(--v-line);border-radius:12px;
@@ -454,6 +456,7 @@ details .inner .tbl{border:1px solid var(--v-line);border-radius:11px;margin-bot
 
 <!-- 로그인 · 입력 순서는 이름 → 비밀번호 -->
 <div id="gate">
+ <div id="gateIn">
   <img class="logo" id="gateLogo" alt="VERDAN">
   <div class="sub">재고관리</div>
   <input type="text" id="nm" placeholder="이름" autocomplete="name" maxlength="20">
@@ -462,6 +465,7 @@ details .inner .tbl{border:1px solid var(--v-line);border-radius:11px;margin-bot
   <div id="gateMsg"></div>
   <div class="hint">본인 이름을 입력하세요. 접근로그에 기록됩니다.<br>
     <span id="verLine"></span></div>
+ </div>
 </div>
 
 <div id="app">
@@ -759,25 +763,53 @@ function fullHeight(){
   }
   return PINH;
 }
+/* 로그인 화면에서 키보드에 가리지 않도록 입력 덩어리를 밀어 올립니다.
+   visH 가 null 이면 원래 자리로 돌아갑니다. */
+function liftGate(visH){
+  const el = $('gateIn');
+  if(!el) return;
+  if(visH === null){ el.style.transform = 'none'; return; }
+  /* offsetTop·offsetHeight 는 transform 의 영향을 받지 않습니다.
+     getBoundingClientRect 를 쓰면 이미 밀어 둔 값이 섞여 계산이 어긋납니다. */
+  const h    = el.offsetHeight;
+  const want = Math.max(14, (visH - h) / 2);
+  el.style.transform = 'translateY(' + Math.round(want - el.offsetTop) + 'px)';
+}
+
 function applyViewportHeight(){
   const vv = window.visualViewport;
   const b  = document.body.style;
-  /* 로그인 화면에서만 높이 변화에 애니메이션을 겁니다 */
-  const g = $('gate');
-  document.body.classList.toggle('kb', !!g && g.classList.contains('on'));
+  const onGate = $('gate') && $('gate').classList.contains('on');
   b.bottom = 'auto';
-  if(keyboardOpen()){
-    /* 키보드가 올라온 동안에만 줄입니다.
-       ①만큼 줄이고 ②(offsetTop)만큼 도로 내려 제자리에 붙입니다. */
+  if(keyboardOpen() && onGate){
+    /* 로그인 화면은 높이를 그대로 둡니다.
+       줄이는 순간 위아래 여백이 다시 계산되면서 내용이 툭 튀어오릅니다.
+       대신 보이는 높이(vv.height) 한가운데로 덩어리만 미끄러뜨립니다.
+       ②(offsetTop)는 iOS 가 스스로 밀어 올린 몫이라 그대로 되돌립니다.
+       그래야 우리가 정한 위치만 남습니다. */
+    b.height = fullHeight() + 'px';
+    b.transform = vv.offsetTop ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
+    liftGate(vv.height);
+  }else if(keyboardOpen()){
+    /* 본 화면 — ①만큼 줄이고 ②만큼 도로 내려 제자리에 붙입니다. */
     b.height = vv.height + 'px';
     b.transform = vv.offsetTop ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
   }else{
     b.height = fullHeight() + 'px';
     b.transform = 'none';
+    liftGate(null);
   }
 }
 let vpT = null;
-function applyViewportSoon(){ clearTimeout(vpT); vpT = setTimeout(applyViewportHeight, 60); }
+function applyViewportSoon(){
+  /* 로그인 화면은 transform 만 움직이므로 미룰 이유가 없습니다.
+     60ms 를 기다리면 키보드가 먼저 출발해 버려 뒤늦게 따라오는 것처럼 보입니다.
+     본 화면은 높이를 바꾸므로 연달아 오는 알림을 한 번으로 묶습니다. */
+  if($('gate') && $('gate').classList.contains('on')){
+    clearTimeout(vpT); applyViewportHeight(); return;
+  }
+  clearTimeout(vpT); vpT = setTimeout(applyViewportHeight, 60);
+}
 
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', applyViewportSoon);
@@ -832,7 +864,6 @@ async function autoLogin(){
   }catch(e){ /* 아래에서 로그인 화면을 띄웁니다 */ }
   PW=''; store(STORE.pw, null);
   $('gate').classList.add('on');
-  document.body.classList.add('kb');
   gmsg('비밀번호가 변경되었습니다. 다시 입력해 주세요.', false);
 }
 
@@ -840,8 +871,6 @@ async function autoLogin(){
 function showGate(){
   $('gate').classList.add('on');
   $('app').classList.remove('on');
-  /* 키보드가 올라오기 전에 미리 붙여 둡니다 — 첫 번째 포커스도 부드럽게 */
-  document.body.classList.add('kb');
   canvas();
   /* ready() 는 부르지 않습니다. 스플래시가 걷힐 때만 바탕색을 바꿉니다.
      여기서 부르면 스플래시가 아직 떠 있는 동안 아래쪽이 밝아집니다. */
@@ -878,7 +907,6 @@ async function login(){
 function enter(r){
   $('gate').classList.remove('on');
   $('app').classList.add('on');
-  document.body.classList.remove('kb');
   canvas();
   gmsg('');
   setData(r);
@@ -895,7 +923,6 @@ function logout(){
   $('wm').style.display='none';
   $('app').classList.remove('on');
   $('gate').classList.add('on');
-  document.body.classList.add('kb');
   canvas();
   NAV='home'; LASTMAIN='p1'; go('p1'); paintBottom();
 }
