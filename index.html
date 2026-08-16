@@ -173,9 +173,12 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
 #gate::after {content:'';flex:1 1 0;min-height:0;}
 /* 키보드가 올라올 때 이 덩어리만 위로 미끄러집니다.
    움직이는 것이 transform 하나뿐이라 레이아웃 계산이 없습니다. */
-/* 곡선은 iOS 키보드가 쓰는 것에 맞춥니다. 우리가 기본으로 쓰는 --ease 는
-   처음이 느긋해서 키보드보다 반 박자 늦게 출발하는 것처럼 보입니다. */
-#gateIn{flex-shrink:0;transition:transform .25s cubic-bezier(.38,.7,.125,1);}
+/* ⚠️ 여기에 transition 을 걸지 마세요.
+   iOS 키보드가 올라오는 길이와 곡선은 웹으로 전달되지 않습니다.
+   비슷하게 흉내 내면 어긋난 움직임이 둘이 되어 하나일 때보다 어색합니다.
+   칸을 누르는 순간 내용은 즉시 제자리로 가 있고, 그 위로 키보드가 올라옵니다.
+   움직이는 것이 키보드 하나뿐이라 박자가 어긋날 일이 없습니다. */
+#gateIn{flex-shrink:0;}
 #gate .logo{width:140px;height:auto;display:block;margin-bottom:14px;}
 #gate .sub{font-size:13px;color:var(--v-mute);margin-bottom:26px;margin-left:3px;}
 #gate input{width:100%;padding:15px 16px;border:1px solid var(--v-line);border-radius:12px;
