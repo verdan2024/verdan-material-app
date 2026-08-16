@@ -145,6 +145,14 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
   -webkit-text-size-adjust:100%;
   transition:background-color .25s var(--ease),color .25s var(--ease);}
 
+/* 키보드가 오르내릴 때 높이가 한 번에 툭 바뀌면 화면이 끊겨 보입니다.
+   iOS 키보드 애니메이션이 대략 0.25초라 그 길이에 맞춥니다.
+   ⚠️ 로그인 화면에서만 켭니다(JS 가 클래스를 붙였다 뗍니다).
+      본 화면은 안쪽 판이 스크롤 중일 때 높이가 늘어졌다 줄어들면
+      목록이 출렁이고 하단 내비가 따라 흔들립니다. */
+body.kb{transition:background-color .25s var(--ease),color .25s var(--ease),
+  height .26s var(--ease),transform .26s var(--ease);}
+
 /* ── 스플래시 ────────────────────────────────────── */
 #splash{position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#30382A;
   display:flex;align-items:center;justify-content:center;
@@ -154,9 +162,16 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
 
 /* ── 로그인 ─────────────────────────────────────── */
 #gate{background:var(--v-bg);flex:1;min-height:0;overflow-y:auto;overscroll-behavior:none;display:none;
-  flex-direction:column;justify-content:center;
+  flex-direction:column;
   padding:calc(24px + env(safe-area-inset-top)) 26px calc(24px + env(safe-area-inset-bottom));}
 #gate.on{display:flex;}
+/* 위아래 여백을 1.4 : 1 로 나눠 정중앙보다 조금 아래에 놓습니다.
+   ⚠️ padding 이나 margin 으로 내리면 안 됩니다. 키보드가 올라와 화면이
+      절반으로 줄었을 때 고정 여백은 그대로 남아 내용이 위로 잘려 나갑니다.
+      이 두 칸은 flex-basis 0 에 grow·shrink 라서 남는 자리만 나눠 갖고,
+      자리가 없으면 스스로 0 이 됩니다. */
+#gate::before{content:'';flex:1.4 1 0;min-height:0;}
+#gate::after {content:'';flex:1 1 0;min-height:0;}
 #gate .logo{width:140px;height:auto;display:block;margin-bottom:14px;}
 #gate .sub{font-size:13px;color:var(--v-mute);margin-bottom:26px;margin-left:3px;}
 #gate input{width:100%;padding:15px 16px;border:1px solid var(--v-line);border-radius:12px;
@@ -747,6 +762,9 @@ function fullHeight(){
 function applyViewportHeight(){
   const vv = window.visualViewport;
   const b  = document.body.style;
+  /* 로그인 화면에서만 높이 변화에 애니메이션을 겁니다 */
+  const g = $('gate');
+  document.body.classList.toggle('kb', !!g && g.classList.contains('on'));
   b.bottom = 'auto';
   if(keyboardOpen()){
     /* 키보드가 올라온 동안에만 줄입니다.
@@ -814,6 +832,7 @@ async function autoLogin(){
   }catch(e){ /* 아래에서 로그인 화면을 띄웁니다 */ }
   PW=''; store(STORE.pw, null);
   $('gate').classList.add('on');
+  document.body.classList.add('kb');
   gmsg('비밀번호가 변경되었습니다. 다시 입력해 주세요.', false);
 }
 
@@ -821,6 +840,8 @@ async function autoLogin(){
 function showGate(){
   $('gate').classList.add('on');
   $('app').classList.remove('on');
+  /* 키보드가 올라오기 전에 미리 붙여 둡니다 — 첫 번째 포커스도 부드럽게 */
+  document.body.classList.add('kb');
   canvas();
   /* ready() 는 부르지 않습니다. 스플래시가 걷힐 때만 바탕색을 바꿉니다.
      여기서 부르면 스플래시가 아직 떠 있는 동안 아래쪽이 밝아집니다. */
@@ -857,6 +878,7 @@ async function login(){
 function enter(r){
   $('gate').classList.remove('on');
   $('app').classList.add('on');
+  document.body.classList.remove('kb');
   canvas();
   gmsg('');
   setData(r);
@@ -873,6 +895,7 @@ function logout(){
   $('wm').style.display='none';
   $('app').classList.remove('on');
   $('gate').classList.add('on');
+  document.body.classList.add('kb');
   canvas();
   NAV='home'; LASTMAIN='p1'; go('p1'); paintBottom();
 }
