@@ -2,9 +2,13 @@
 <html lang="ko" data-theme="light">
 <head>
 <meta charset="UTF-8">
-<!-- maximum-scale 은 넣지 않는다. 독립 앱 모드에서 입력 칸 포커스를 막는다.
-     입력 칸 글자가 16px 이라 이것 없이도 화면이 멋대로 확대되지 않는다. -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- 확대·축소를 막습니다. 손가락으로 당겨 화면이 한 번 줄어들면
+     안전영역(상태바) 계산이 통째로 어긋나 헤더가 시계와 겹칩니다.
+     ⚠️ 예전에 이 값이 독립 앱 모드에서 입력칸 포커스를 막은 적이 있습니다.
+        로그인 칸이 눌리지 않으면 아래 줄로 되돌리세요.
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+     입력칸 글자는 16px 이라 자동 확대는 일어나지 않습니다. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>버던_재고</title>
 
 <link rel="apple-touch-icon" href="https://verdan2024.github.io/verdan-core/apple-touch-icon.png">
@@ -121,16 +125,15 @@ html.ready{background:var(--v-bg);}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-serif;
   background:var(--v-bg);color:var(--v-txt);
   position:fixed;top:0;left:0;width:100%;overflow:hidden;
-  /* iOS 독립 앱에서 height:100% 는 홈 인디케이터 영역을 빼고 잡혀
-     화면 맨 아래에 밝은 띠가 남습니다. dvh 로 실제 화면 높이를 씁니다. */
-  height:100vh;height:100dvh;
+  /* 높이는 코어 JS 가 "실제 보이는 영역"에 맞춰 넣습니다(applyViewportHeight).
+     100% · 100dvh 둘 다 iOS 독립 앱에서 아래쪽이 비거나 키보드에 밀립니다. */
+  height:100vh;
   display:flex;flex-direction:column;overscroll-behavior:none;touch-action:manipulation;
   -webkit-text-size-adjust:100%;
   transition:background-color .25s var(--ease),color .25s var(--ease);}
 
 /* ── 스플래시 ────────────────────────────────────── */
-#splash{position:fixed;top:0;left:0;right:0;bottom:0;height:100vh;height:100dvh;
-  z-index:99999;background:#30382A;
+#splash{position:fixed;top:0;left:0;right:0;bottom:0;z-index:99999;background:#30382A;
   display:flex;align-items:center;justify-content:center;
   transition:opacity .45s var(--ease);}
 #splash.gone{opacity:0;pointer-events:none;}
@@ -164,6 +167,8 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
    접히면 margin-top 을 헤더 높이만큼 음수로 줘서 헤더가 위로 잘려 나갑니다. */
 /* 안전영역(상태바) 여백은 #chrome 이 갖습니다.
    헤더만 위로 미끄러져 잘리므로, 접혀도 탭이 상태바에 파고들지 않습니다. */
+/* 무신사 실측 — 안전영역 아래 16px 에 탭 글자, 바 하단 107px.
+   안전영역(59) + 6px + 탭 위 여백(12px) = 77px, 바 하단 105px 로 맞춥니다. */
 #chrome{flex-shrink:0;z-index:30;background:var(--v-header);overflow:hidden;
   padding-top:calc(env(safe-area-inset-top) + 6px);}
 #header{padding:6px 18px 12px;transition:margin-top .2s var(--ease);
@@ -331,7 +336,7 @@ details .tbl{border:none;border-radius:0;border-top:1px solid var(--v-line);marg
 /* ── 하단 내비 ────────────────────────────────────── */
 #bottom{flex-shrink:0;display:flex;background:var(--v-card);border-top:1px solid var(--v-line);
   padding-bottom:env(safe-area-inset-bottom);z-index:40;}
-#bottom button{flex:1;border:none;background:none;font-family:inherit;padding:9px 0 8px;
+#bottom button{flex:1;border:none;background:none;font-family:inherit;padding:8px 0 7px;
   display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--v-ph);}
 #bottom button.on{color:var(--v-strong);}
 #bottom svg{width:22px;height:22px;}
@@ -638,6 +643,41 @@ function failMsg(e, tail){
     : ('통신에 실패했습니다. ' + (tail || '잠시 후 다시 시도하세요.'));
 }
 
+/* ── 화면 높이 · 키보드 ────────────────────────────
+   iOS 는 키보드가 올라올 때 두 가지를 합니다.
+     ① 보이는 높이를 줄인다      → visualViewport.height
+     ② 화면 전체를 위로 밀어올린다 → visualViewport.offsetTop
+   ①만큼 body 높이를 줄이고, ②만큼 도로 내려 제자리에 붙입니다.
+
+   ⚠️ offsetTop 은 키보드 때문에만 변하지 않습니다. 손가락으로 화면을
+      당길 때도 변합니다. 무조건 따라가면 화면이 손가락을 따라다닙니다.
+      "화면이 120px 넘게 줄었을 때 = 키보드" 일 때만 보정합니다. */
+function keyboardOpen(){
+  const vv = window.visualViewport;
+  return !!vv && (window.innerHeight - vv.height > 120);
+}
+function applyViewportHeight(){
+  const vv = window.visualViewport;
+  const h  = vv ? vv.height : window.innerHeight;
+  document.body.style.height = h + 'px';
+  document.body.style.transform =
+    (keyboardOpen() && vv.offsetTop) ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
+}
+let vpT = null;
+function applyViewportSoon(){ clearTimeout(vpT); vpT = setTimeout(applyViewportHeight, 60); }
+
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', applyViewportSoon);
+  /* scroll 은 손가락으로 당길 때도 오므로 키보드가 올라와 있을 때만 반응합니다 */
+  window.visualViewport.addEventListener('scroll', function(){
+    if(keyboardOpen()) applyViewportSoon();
+  });
+}
+window.addEventListener('resize', applyViewportHeight);
+/* 키보드가 내려간 뒤 남은 자리를 정리합니다 */
+document.addEventListener('focusout', function(){ setTimeout(applyViewportHeight, 300); });
+applyViewportHeight();
+
 /* ── 스플래시 → 로그인 또는 자동 로그인 ───────────── */
 function ready(){ document.documentElement.classList.add('ready'); }
 
@@ -794,7 +834,6 @@ function measure(){
   document.documentElement.style.setProperty('--hh', $('header').offsetHeight+'px');
 }
 window.addEventListener('resize', function(){ measure(); if(PW) watermark(); });
-
 function onScroll(e){
   const el = e.currentTarget;
   if(ticking) return;
