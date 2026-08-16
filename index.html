@@ -38,6 +38,11 @@
    ⑤ 접근로그 · 로그아웃을 마이페이지로 이동. 하단 내비 [홈][마이페이지]
    ⑥ 이모지를 단색 SVG 아이콘 · 상태 점으로 교체
    ⑦ 라이트/다크 색 토큰 두 벌
+
+   [제품] 화면 정리
+   · 맨 위 큰 숫자 요약(정상품 합계)을 뺐습니다.
+   · 품절 안내 상자를 뺐습니다.
+     재고 0인 옵션은 표를 펼쳤을 때 [총] 칸에 붉은 '품절'로 남습니다.
    ══════════════════════════════════════════════════════ */
 
 /* ── 색 토큰 · 라이트 ───────────────────────────────
@@ -309,6 +314,9 @@ button.ghost{background:transparent;color:var(--v-strong);border:1px solid var(-
 .box .bd{margin-top:9px;}
 .box .bd > div + div{margin-top:11px;}
 
+/* ⚠️ 지금은 쓰이지 않습니다.
+   [제품] 맨 위의 큰 숫자 요약을 뺐기 때문입니다.
+   되돌릴 여지가 있어 규칙은 남겨 둡니다. */
 .summary{display:flex;align-items:baseline;gap:8px;padding:2px 2px 14px;}
 .summary .big{font-size:22px;font-weight:800;color:var(--v-strong);
   font-variant-numeric:tabular-nums;}
@@ -1194,8 +1202,9 @@ function renderProducts(){
     return;
   }
 
-  let h = '<div class="summary"><span class="big">'+n(합(정상))+'</span>'+
-    '<span class="lb">개 · 정상품 '+정상.length+'종</span></div>';
+  /* ⚠️ 맨 위 큰 숫자 요약(정상품 합계)은 뺐습니다.
+     합계는 [정상 제품] 줄 오른쪽에 이미 같은 값으로 나옵니다. */
+  let h = '';
 
   /* 디자인별 묶음 — 원본 순서를 따른다 */
   const groups=[];
@@ -1215,14 +1224,8 @@ function renderProducts(){
         '<span class="cnt">'+n(합(g.rows))+'개</span></div>'+제품표(g.rows,false);
     }).join('')+'</div>', false);
 
-  /* 품절 알림 — 정상품 아래, 리퍼브 위 */
-  const 품절 = 정상.filter(function(x){ return x.tot<=0; });
-  if(품절.length){
-    h += '<div class="box danger"><div class="hd"><span class="dot danger"></span>'+
-      '품절 '+품절.length+'종</div><div class="bd">'+
-      품절.map(function(x){ return esc(디자인명(x.name)+' · '+(x.opt||'')); }).join('<br>')+
-      '</div></div>';
-  }
+  /* ⚠️ 품절 안내 상자는 뺐습니다.
+     재고 0인 옵션은 표를 펼쳤을 때 [총] 칸에 붉은 '품절'로 남습니다. */
 
   /* 리퍼브·협찬은 접힌 상태로 시작합니다 */
   if(리퍼브.length) h += 접기('리퍼브 제품', n(합(리퍼브))+'개', 제품표(리퍼브,true), false);
