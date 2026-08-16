@@ -173,7 +173,9 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic',-apple-system,Arial,sans-
 #gate::after {content:'';flex:1 1 0;min-height:0;}
 /* 키보드가 올라올 때 이 덩어리만 위로 미끄러집니다.
    움직이는 것이 transform 하나뿐이라 레이아웃 계산이 없습니다. */
-#gateIn{flex-shrink:0;transition:transform .26s var(--ease);}
+/* 곡선은 iOS 키보드가 쓰는 것에 맞춥니다. 우리가 기본으로 쓰는 --ease 는
+   처음이 느긋해서 키보드보다 반 박자 늦게 출발하는 것처럼 보입니다. */
+#gateIn{flex-shrink:0;transition:transform .25s cubic-bezier(.38,.7,.125,1);}
 #gate .logo{width:140px;height:auto;display:block;margin-bottom:14px;}
 #gate .sub{font-size:13px;color:var(--v-mute);margin-bottom:26px;margin-left:3px;}
 #gate input{width:100%;padding:15px 16px;border:1px solid var(--v-line);border-radius:12px;
@@ -776,6 +778,9 @@ function liftGate(visH){
   el.style.transform = 'translateY(' + Math.round(want - el.offsetTop) + 'px)';
 }
 
+/* 직전에 잰 키보드 높이. 두 번째부터는 이 값으로 미리 움직입니다. */
+let KBH = 0;
+
 function applyViewportHeight(){
   const vv = window.visualViewport;
   const b  = document.body.style;
@@ -789,6 +794,7 @@ function applyViewportHeight(){
        그래야 우리가 정한 위치만 남습니다. */
     b.height = fullHeight() + 'px';
     b.transform = vv.offsetTop ? 'translateY(' + vv.offsetTop + 'px)' : 'none';
+    KBH = Math.round(fullHeight() - vv.height);
     liftGate(vv.height);
   }else if(keyboardOpen()){
     /* 본 화면 — ①만큼 줄이고 ②만큼 도로 내려 제자리에 붙입니다. */
@@ -820,7 +826,25 @@ if(window.visualViewport){
 }
 window.addEventListener('resize', applyViewportHeight);
 /* 키보드가 내려간 뒤 남은 자리를 정리합니다 */
-document.addEventListener('focusout', function(){ setTimeout(applyViewportHeight, 300); });
+/* ⚠️ 키보드가 다 올라온 뒤에야 visualViewport 가 알려주는 기기가 있습니다.
+   그때 움직이기 시작하면 언제나 반 박자 늦습니다.
+   그래서 칸을 누르는 순간 먼저 출발시키고, 실제 값이 오면 조용히 맞춥니다.
+   첫 번째만 어림값(화면의 42%)을 쓰고 그 뒤로는 직전에 잰 값을 씁니다. */
+document.addEventListener('focusin', function(e){
+  if(!e.target || !e.target.closest || !e.target.closest('#gateIn')) return;
+  if(keyboardOpen()) return;                 /* 이미 올라와 있으면 그대로 */
+  const full = fullHeight();
+  liftGate(full - (KBH || Math.round(full * 0.42)));
+});
+document.addEventListener('focusout', function(){
+  /* 다른 칸으로 옮기는 중이면 키보드는 내려가지 않습니다 */
+  setTimeout(function(){
+    const a = document.activeElement;
+    if(a && a.closest && a.closest('#gateIn')) return;
+    liftGate(null);
+  }, 0);
+  setTimeout(applyViewportHeight, 300);
+});
 applyViewportHeight();
 
 /* ── 스플래시 → 로그인 또는 자동 로그인 ───────────── */
